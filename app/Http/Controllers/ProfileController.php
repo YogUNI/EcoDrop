@@ -7,13 +7,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): View
     {
         return view('profile.edit', [
@@ -21,9 +19,6 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -37,9 +32,46 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-    /**
-     * Delete the user's account.
-     */
+    // ← METHOD BARU: Upload foto profile
+    public function updatePhoto(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'profile_photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'profile_photo.required' => 'Pilih foto terlebih dahulu',
+            'profile_photo.image'    => 'File harus berupa gambar',
+            'profile_photo.mimes'    => 'Format foto harus jpg, jpeg, png, atau webp',
+            'profile_photo.max'      => 'Ukuran foto maksimal 2MB',
+        ]);
+
+        $user = $request->user();
+
+        // Hapus foto lama kalau ada
+        if ($user->profile_photo) {
+            Storage::disk('public')->delete($user->profile_photo);
+        }
+
+        // Simpan foto baru
+        $path = $request->file('profile_photo')->store('profile-photos', 'public');
+
+        $user->update(['profile_photo' => $path]);
+
+        return Redirect::route('profile.edit')->with('status', 'photo-updated');
+    }
+
+    // ← METHOD BARU: Hapus foto profile
+    public function deletePhoto(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($user->profile_photo) {
+            Storage::disk('public')->delete($user->profile_photo);
+            $user->update(['profile_photo' => null]);
+        }
+
+        return Redirect::route('profile.edit')->with('status', 'photo-deleted');
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
@@ -48,8 +80,12 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
+        // Hapus foto profile kalau ada
+        if ($user->profile_photo) {
+            Storage::disk('public')->delete($user->profile_photo);
+        }
 
+        Auth::logout();
         $user->delete();
 
         $request->session()->invalidate();

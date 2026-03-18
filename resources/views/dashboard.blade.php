@@ -1,27 +1,39 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg">
-                    <span class="text-2xl">{{ Auth::user()->role === 'admin' ? '👑' : '🌱' }}</span>
-                </div>
-                <div>
-                    <h2 class="font-extrabold text-3xl bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        {{ Auth::user()->role === 'admin' ? 'Admin Panel' : 'EcoDrop Dashboard' }}
-                    </h2>
-                    <p class="text-sm text-gray-500 mt-1">Selamat datang, {{ Auth::user()->name }}! 👋</p>
-                </div>
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg">
+                <span class="text-2xl">🌱</span>
+            </div>
+            <div>
+                <h2 class="font-extrabold text-3xl bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                    EcoDrop Dashboard
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">Selamat datang, {{ Auth::user()->name }}! 👋</p>
             </div>
         </div>
     </x-slot>
 
-    <div x-data="{ 
-        isModalOpen: false,
-        searchQuery: '',
-        filterStatus: '',
-        filterType: ''
-    }" class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-blue-50 py-12 relative overflow-hidden">
-        <!-- Floating Background Elements -->
+    <div x-data="{
+            isModalOpen: {{ $errors->any() ? 'true' : 'false' }},
+            isDetailOpen: false,
+            detail: null,
+            photoPreview: null,
+            photoName: '',
+            handlePhoto(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                this.photoName = file.name;
+                const reader = new FileReader();
+                reader.onload = (ev) => { this.photoPreview = ev.target.result; };
+                reader.readAsDataURL(file);
+            },
+            openDetail(data) {
+                this.detail = data;
+                this.isDetailOpen = true;
+            }
+         }"
+         class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-blue-50 py-12 relative overflow-hidden">
+
         <div class="fixed inset-0 pointer-events-none">
             <div class="absolute top-20 left-10 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
             <div class="absolute top-40 right-10 w-72 h-72 bg-emerald-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
@@ -29,19 +41,18 @@
         </div>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 relative z-10">
-            
-            <!-- Success Alert dengan Animasi -->
+
             @if (session('success'))
-                <div x-data="{ show: true }" 
-                     x-show="show" 
-                     x-init="setTimeout(() => show = false, 5000)" 
+                <div x-data="{ show: true }"
+                     x-show="show"
+                     x-init="setTimeout(() => show = false, 5000)"
                      x-transition:enter="transition ease-out duration-300"
                      x-transition:enter-start="opacity-0 transform scale-90"
                      x-transition:enter-end="opacity-100 transform scale-100"
                      x-transition:leave="transition ease-in duration-300"
                      x-transition:leave-start="opacity-100 transform scale-100"
                      x-transition:leave-end="opacity-0 transform scale-90"
-                     class="mb-6 p-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-xl flex justify-between items-center backdrop-blur-sm border border-emerald-400/50">
+                     class="mb-6 p-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-xl flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <span class="text-2xl animate-bounce">✨</span>
                         <span class="font-bold text-lg">{{ session('success') }}</span>
@@ -50,737 +61,419 @@
                 </div>
             @endif
 
-            <!-- ADMIN DASHBOARD -->
-            @if(Auth::user()->role === 'admin')
-                @php
-                    // Calculate statistics
-                    $totalPickups = $pickups->count();
-                    $pendingPickups = $pickups->where('status', 'pending')->count();
-                    $approvedPickups = $pickups->where('status', 'approved')->count();
-                    $rejectedPickups = $pickups->where('status', 'rejected')->count();
-                    
-                    $totalWeight = $pickups->where('status', 'approved')->sum('weight');
-                    $todayWeight = $pickups->where('status', 'approved')
-                        ->whereDate('pickup_date', \Carbon\Carbon::today())
-                        ->sum('weight');
-                    
-                    $totalUsers = $pickups->pluck('user_id')->unique()->count();
-                    $approvalRate = $totalPickups > 0 ? round(($approvedPickups / $totalPickups) * 100, 1) : 0;
-                    
-                    // Data untuk Chart
-                    $wasteByType = [];
-                    foreach(['Plastik', 'Kertas', 'Logam', 'Kaca', 'Organik', 'Elektronik', 'Lainnya'] as $type) {
-                        $wasteByType[$type] = $pickups->where('type', $type)->where('status', 'approved')->sum('weight');
-                    }
-                    
-                    // Last 7 days data
-                    $last7Days = [];
-                    for($i = 6; $i >= 0; $i--) {
-                        $date = \Carbon\Carbon::today()->subDays($i)->format('Y-m-d');
-                        $weight = $pickups->where('status', 'approved')
-                            ->whereDate('pickup_date', $date)
-                            ->sum('weight');
-                        $last7Days[\Carbon\Carbon::parse($date)->format('d M')] = $weight;
-                    }
-                @endphp
-
-                <!-- Admin Header Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="group bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50 hover:shadow-xl transition duration-300 transform hover:scale-105 hover:-translate-y-1">
-                        <div class="flex justify-between items-start mb-4">
+            {{-- Points + CTA --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="bg-gradient-to-br from-green-400 via-emerald-500 to-green-600 rounded-3xl shadow-2xl overflow-hidden">
+                    <div class="p-8 text-white">
+                        <div class="flex justify-between items-start mb-6">
                             <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Setoran</p>
-                                <h3 class="text-4xl font-black text-gray-900 mt-2">{{ $totalPickups }}</h3>
+                                <p class="text-green-100 text-sm font-bold uppercase tracking-wider">Saldo Poin Anda</p>
+                                <h3 class="text-6xl font-black mt-3 drop-shadow-lg">{{ Auth::user()->points }}</h3>
                             </div>
-                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-xl shadow-lg">📦</div>
+                            <div class="text-5xl animate-bounce">🏆</div>
                         </div>
-                        <p class="text-xs text-gray-400">Dari semua user</p>
-                    </div>
-
-                    <div class="group bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50 hover:shadow-xl transition duration-300 transform hover:scale-105 hover:-translate-y-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Menunggu Verifikasi</p>
-                                <h3 class="text-4xl font-black text-yellow-600 mt-2">{{ $pendingPickups }}</h3>
-                            </div>
-                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-xl shadow-lg">⏳</div>
-                        </div>
-                        <p class="text-xs text-gray-400">Butuh aksi</p>
-                    </div>
-
-                    <div class="group bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50 hover:shadow-xl transition duration-300 transform hover:scale-105 hover:-translate-y-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Sudah Disetujui</p>
-                                <h3 class="text-4xl font-black text-green-600 mt-2">{{ $approvedPickups }}</h3>
-                            </div>
-                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-xl shadow-lg">✅</div>
-                        </div>
-                        <p class="text-xs text-gray-400">Berhasil</p>
-                    </div>
-
-                    <div class="group bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50 hover:shadow-xl transition duration-300 transform hover:scale-105 hover:-translate-y-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Sampah Diterima</p>
-                                <h3 class="text-4xl font-black text-purple-600 mt-2">{{ number_format($totalWeight, 1) }}</h3>
-                            </div>
-                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-xl shadow-lg">⚖️</div>
-                        </div>
-                        <p class="text-xs text-gray-400">Kg</p>
+                        <p class="text-green-100 text-sm font-semibold">Terus setor sampah untuk mendapat lebih banyak poin!</p>
                     </div>
                 </div>
-
-                <!-- Additional Stats Row -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Hari Ini</p>
-                                <h3 class="text-3xl font-black text-blue-600 mt-2">{{ number_format($todayWeight, 1) }} Kg</h3>
-                            </div>
-                            <span class="text-4xl">📅</span>
-                        </div>
+                <div class="md:col-span-2 bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-gray-100/50 flex flex-col justify-between">
+                    <div class="mb-6">
+                        <h3 class="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">♻️ Setor Sampah</h3>
+                        <p class="text-gray-600 mt-2 font-medium">Ubah sampah Anda menjadi poin reward!</p>
                     </div>
+                    <button @click="isModalOpen = true"
+                        class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-105 flex items-center justify-center gap-3 text-lg">
+                        <span class="text-2xl">➕</span>
+                        <span>Setor Baru Sekarang</span>
+                        <span class="text-2xl animate-pulse">→</span>
+                    </button>
+                </div>
+            </div>
 
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total User</p>
-                                <h3 class="text-3xl font-black text-indigo-600 mt-2">{{ $totalUsers }}</h3>
-                            </div>
-                            <span class="text-4xl">👥</span>
-                        </div>
-                    </div>
-
-                    <div class="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-100/50">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Approval Rate</p>
-                                <h3 class="text-3xl font-black text-green-600 mt-2">{{ $approvalRate }}%</h3>
-                            </div>
-                            <span class="text-4xl">📊</span>
-                        </div>
-                    </div>
+            {{-- Riwayat Setoran --}}
+            <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-100/50 overflow-hidden">
+                <div class="p-8 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
+                    <h3 class="text-2xl font-black text-gray-900">📜 Riwayat Setoran Anda</h3>
+                    <p class="text-sm text-gray-500 mt-1">Pantau status semua setoran sampah Anda</p>
                 </div>
 
-                <!-- Charts Section -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                    <!-- Bar Chart - Waste by Type -->
-                    <div class="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100/50">
-                        <h3 class="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                            <span>📊</span>
-                            Total Sampah per Jenis
-                        </h3>
-                        <canvas id="wasteByTypeChart"></canvas>
-                    </div>
+                <div class="p-8">
+                    @if($pickups->count() > 0)
+                        <div class="space-y-3">
+                            @foreach($pickups as $pickup)
+                                @php
+                                    $detailData = json_encode([
+                                        'id'          => $pickup->id,
+                                        'type'        => $pickup->type,
+                                        'weight'      => $pickup->weight,
+                                        'pickup_date' => \Carbon\Carbon::parse($pickup->pickup_date)->format('d M Y'),
+                                        'address'     => $pickup->address,
+                                        'phone'       => $pickup->phone,
+                                        'status'      => $pickup->status,
+                                        'points'      => $pickup->points_earned,
+                                        'notes'       => $pickup->notes,
+                                        'photo'       => $pickup->photo ? Storage::url($pickup->photo) : null,
+                                        'latitude'    => $pickup->latitude,
+                                        'longitude'   => $pickup->longitude,
+                                        'handled_by'  => $pickup->handledBy?->name,
+                                        'maps_url'    => $pickup->latitude ? "https://maps.google.com/?q={$pickup->latitude},{$pickup->longitude}" : null,
+                                    ]);
+                                @endphp
+                                <div class="flex items-center justify-between p-5 rounded-2xl border border-gray-200 hover:border-green-300 hover:bg-green-50/50 transition duration-300 hover:shadow-md group">
+                                    {{-- Left: info ringkas --}}
+                                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                                        {{-- Icon jenis --}}
+                                        <div class="w-12 h-12 rounded-2xl bg-gray-100 group-hover:bg-green-100 flex items-center justify-center text-2xl transition flex-shrink-0">
+                                            @switch($pickup->type)
+                                                @case('Plastik') 🪴 @break
+                                                @case('Kertas') 📄 @break
+                                                @case('Logam') 🔩 @break
+                                                @case('Kaca') 🥛 @break
+                                                @case('Organik') 🍂 @break
+                                                @case('Elektronik') ⚡ @break
+                                                @case('Lainnya') 📦 @break
+                                                @default ♻️
+                                            @endswitch
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="font-black text-gray-900">{{ $pickup->type }} · {{ $pickup->weight }} Kg</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">📅 {{ \Carbon\Carbon::parse($pickup->pickup_date)->format('d M Y') }}</p>
+                                        </div>
+                                    </div>
 
-                    <!-- Pie Chart - Approval Rate -->
-                    <div class="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100/50">
-                        <h3 class="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                            <span>📈</span>
-                            Status Setoran
-                        </h3>
-                        <canvas id="approvalRateChart"></canvas>
-                    </div>
-                </div>
+                                    {{-- Center: status --}}
+                                    <div class="flex-shrink-0 mx-4">
+                                        @if($pickup->status === 'pending')
+                                            <span class="inline-flex items-center gap-1.5 bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded-full font-bold text-xs">
+                                                <span class="w-1.5 h-1.5 bg-yellow-600 rounded-full animate-pulse"></span>
+                                                Menunggu
+                                            </span>
+                                        @elseif($pickup->status === 'approved')
+                                            <span class="inline-flex items-center gap-1.5 bg-green-100 text-green-800 px-3 py-1.5 rounded-full font-bold text-xs">
+                                                <span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                                                +{{ $pickup->points_earned }} poin
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 bg-red-100 text-red-800 px-3 py-1.5 rounded-full font-bold text-xs">
+                                                <span class="w-1.5 h-1.5 bg-red-600 rounded-full"></span>
+                                                Ditolak
+                                            </span>
+                                        @endif
+                                    </div>
 
-                <!-- Line Chart - 7 Days Trend -->
-                <div class="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100/50 mb-8">
-                    <h3 class="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
-                        <span>📉</span>
-                        Tren Sampah 7 Hari Terakhir
-                    </h3>
-                    <canvas id="sevenDaysTrendChart"></canvas>
-                </div>
+                                    {{-- Right: actions --}}
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        {{-- Tombol Detail --}}
+                                        <button @click="openDetail({{ $detailData }})"
+                                            class="text-xs bg-green-50 text-green-700 hover:bg-green-100 font-bold px-3 py-2 border border-green-200 rounded-lg transition duration-200">
+                                            🔍 Detail
+                                        </button>
 
-                <!-- Tabel Antrian Setoran dengan Search & Filter -->
-                <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-100/50 overflow-hidden">
-                    <div class="p-8 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-                        <div class="flex justify-between items-center mb-6">
-                            <div>
-                                <h3 class="text-2xl font-black text-gray-900">📋 Antrian Setor Sampah</h3>
-                                <p class="text-sm text-gray-500 mt-1">Kelola semua setoran sampah dari user</p>
-                            </div>
-                        </div>
-
-                        <!-- Search & Filter -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <!-- Search Input -->
-                            <div class="relative">
-                                <input type="text" x-model="searchQuery" placeholder="🔍 Cari nama user atau email..." class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300">
-                            </div>
-
-                            <!-- Filter Status -->
-                            <div class="relative">
-                                <select x-model="filterStatus" class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 cursor-pointer appearance-none" style="background-image: url('data:image/svg+xml;utf8,<svg fill=\'%23059669\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1.5em 1.5em; padding-right: 2.5rem;">
-                                    <option value="">📊 Status (Semua)</option>
-                                    <option value="pending">⏳ Pending</option>
-                                    <option value="approved">✅ Approved</option>
-                                    <option value="rejected">❌ Rejected</option>
-                                </select>
-                            </div>
-
-                            <!-- Filter Type -->
-                            <div class="relative">
-                                <select x-model="filterType" class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 cursor-pointer appearance-none" style="background-image: url('data:image/svg+xml;utf8,<svg fill=\'%23059669\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1.5em 1.5em; padding-right: 2.5rem;">
-                                    <option value="">♻️ Jenis (Semua)</option>
-                                    <option value="Plastik">🪴 Plastik</option>
-                                    <option value="Kertas">📄 Kertas</option>
-                                    <option value="Logam">🔩 Logam</option>
-                                    <option value="Kaca">🥛 Kaca</option>
-                                    <option value="Organik">🍂 Organik</option>
-                                    <option value="Elektronik">⚡ Elektronik</option>
-                                    <option value="Lainnya">📦 Lainnya</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="p-8 overflow-x-auto">
-                        @if($pickups->count() > 0)
-                            <table class="w-full text-left" id="pickupsTable">
-                                <thead>
-                                    <tr class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b-2 border-gray-200">
-                                        <th class="pb-4 pl-4">👤 User</th>
-                                        <th class="pb-4">♻️ Jenis Sampah</th>
-                                        <th class="pb-4">📍 Alamat</th>
-                                        <th class="pb-4">📅 Tanggal</th>
-                                        <th class="pb-4 text-center">📊 Status</th>
-                                        <th class="pb-4 text-right">⚙️ Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($pickups as $pickup)
-                                        <tr class="border-b border-gray-100 hover:bg-gradient-to-r hover:from-green-50 hover:to-transparent transition duration-300 group searchable-row" data-name="{{ strtolower($pickup->user->name) }}" data-email="{{ strtolower($pickup->user->email) }}" data-status="{{ $pickup->status }}" data-type="{{ $pickup->type }}">
-                                            <td class="py-5 pl-4">
-                                                <div class="flex items-center gap-3">
-                                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
-                                                        {{ substr($pickup->user->name, 0, 1) }}
-                                                    </div>
-                                                    <div>
-                                                        <p class="font-bold text-gray-900">{{ $pickup->user->name }}</p>
-                                                        <p class="text-xs text-gray-500">{{ $pickup->user->email }}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="py-5">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 py-2 px-4 rounded-full text-sm font-bold shadow-sm">
-                                                        @switch($pickup->type)
-                                                            @case('Plastik') 🪴 @break
-                                                            @case('Kertas') 📄 @break
-                                                            @case('Logam') 🔩 @break
-                                                            @case('Kaca') 🥛 @break
-                                                            @case('Organik') 🍂 @break
-                                                            @case('Elektronik') ⚡ @break
-                                                            @case('Lainnya') 📦 @break
-                                                            @default ♻️
-                                                        @endswitch
-                                                        {{ $pickup->type }}
-                                                    </span>
-                                                    <span class="text-gray-900 font-bold">{{ $pickup->weight }} Kg</span>
-                                                </div>
-                                            </td>
-                                            <td class="py-5">
-                                                <span class="text-xs text-gray-600 line-clamp-2 max-w-xs" title="{{ $pickup->address }}">
-                                                    {{ Str::limit($pickup->address, 40, '...') }}
-                                                </span>
-                                            </td>
-                                            <td class="py-5">
-                                                <span class="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-semibold text-sm">
-                                                    📆 {{ \Carbon\Carbon::parse($pickup->pickup_date)->format('d M Y') }}
-                                                </span>
-                                            </td>
-                                            <td class="py-5 text-center">
-                                                @if($pickup->status === 'pending')
-                                                    <span class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                                                        <span class="w-2 h-2 bg-yellow-600 rounded-full animate-pulse"></span>
-                                                        ⏳ Pending
-                                                    </span>
-                                                @elseif($pickup->status === 'approved')
-                                                    <span class="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                                                        <span class="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
-                                                        ✅ Approved
-                                                    </span>
-                                                @else
-                                                    <span class="inline-flex items-center gap-2 bg-red-100 text-red-800 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                                                        <span class="w-2 h-2 bg-red-600 rounded-full"></span>
-                                                        ❌ Rejected
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="py-5 text-right">
-                                                @if($pickup->status === 'pending')
-                                                    <div class="flex justify-end items-center gap-3 flex-wrap">
-                                                        <form action="{{ route('pickups.update', $pickup->id) }}" method="POST" class="flex items-center gap-2">
-                                                            @csrf
-                                                            @method('PATCH')
-                                                            <div class="relative group">
-                                                                <input type="number" name="points_earned" placeholder="Poin" required class="w-20 px-3 py-2 text-sm font-bold rounded-lg border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 bg-gray-50 focus:bg-white" />
-                                                                <span class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition duration-300 whitespace-nowrap">Masukkan poin</span>
-                                                            </div>
-                                                            <button type="submit" name="status" value="approved" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-105 flex items-center gap-2">
-                                                                <span>✅</span>
-                                                                <span class="hidden sm:inline">Setuju</span>
-                                                            </button>
-                                                            <button type="submit" name="status" value="rejected" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-105 flex items-center gap-2">
-                                                                <span>❌</span>
-                                                                <span class="hidden sm:inline">Tolak</span>
-                                                            </button>
-                                                        </form>
-
-                                                        <form action="{{ route('pickups.destroy', $pickup->id) }}" method="POST" onsubmit="return confirm('⚠️ Yakin mau hapus data ini dari database? Tindakan ini tidak bisa dibatalkan!');" class="inline">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold text-sm px-3 py-2 rounded-lg transition duration-300 transform hover:scale-110">
-                                                                🗑️
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                @else
-                                                    <div class="text-right">
-                                                        <p class="text-sm text-gray-600 font-semibold">Selesai</p>
-                                                        <p class="text-lg font-black text-green-600">+{{ $pickup->points_earned }} 🏆</p>
-                                                    </div>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @else
-                            <div class="text-center py-16">
-                                <div class="text-6xl mb-4">📭</div>
-                                <p class="text-gray-500 text-lg">Belum ada setoran sampah masuk</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-            <!-- USER DASHBOARD -->
-            @else
-                <!-- Points Card dengan Animasi -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <!-- Points Card -->
-                    <div class="group relative bg-gradient-to-br from-green-400 via-emerald-500 to-green-600 rounded-3xl shadow-2xl overflow-hidden cursor-pointer transform transition duration-300 hover:scale-105 hover:shadow-3xl">
-                        <!-- Animated Background -->
-                        <div class="absolute inset-0 opacity-10">
-                            <div class="absolute inset-0 bg-gradient-to-r from-white to-transparent transform -skew-x-12 group-hover:skew-x-12 transition duration-500"></div>
-                        </div>
-                        
-                        <div class="relative p-8 text-white">
-                            <div class="flex justify-between items-start mb-6">
-                                <div>
-                                    <p class="text-green-100 text-sm font-bold uppercase tracking-wider">Saldo Poin Anda</p>
-                                    <h3 class="text-6xl font-black mt-3 drop-shadow-lg">{{ Auth::user()->points }}</h3>
+                                        {{-- Batalkan --}}
+                                        @if($pickup->status === 'pending')
+                                            <form action="{{ route('pickups.destroy', $pickup->id) }}" method="POST"
+                                                  onsubmit="return confirm('⚠️ Yakin ingin membatalkan setoran ini?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-xs text-red-500 hover:text-red-700 font-bold px-3 py-2 border border-red-200 rounded-lg transition duration-200">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="text-5xl animate-bounce">🏆</div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-16">
+                            <div class="text-6xl mb-4">🌱</div>
+                            <p class="text-gray-500 text-lg font-semibold mb-2">Belum ada setoran sampah</p>
+                            <p class="text-gray-400 text-sm">Mulai sekarang dengan menekan tombol "Setor Baru"!</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- ═══ MODAL DETAIL SETORAN ═══ --}}
+        <template x-teleport="body">
+            <div x-show="isDetailOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4"
+                 style="display: none;">
+                <div @click.away="isDetailOpen = false"
+                     x-show="isDetailOpen"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 transform scale-90"
+                     x-transition:enter-end="opacity-100 transform scale-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0 transform scale-90"
+                     class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
+                    {{-- Header --}}
+                    <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-5 flex justify-between items-center flex-shrink-0">
+                        <div>
+                            <h3 class="text-white font-black text-lg">📦 Detail Setoran</h3>
+                            <p class="text-green-100 text-xs mt-0.5" x-text="detail ? '#' + detail.id + ' · ' + detail.type : ''"></p>
+                        </div>
+                        <button @click="isDetailOpen = false"
+                            class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center text-white text-xl font-bold transition">✕</button>
+                    </div>
+
+                    <div class="overflow-y-auto flex-1 p-6 space-y-4">
+
+                        {{-- Foto sampah --}}
+                        <div x-show="detail && detail.photo">
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">📸 Foto Sampah</p>
+                            <img :src="detail ? detail.photo : ''"
+                                 class="w-full rounded-2xl object-cover max-h-56 shadow-sm border border-gray-100">
+                        </div>
+
+                        {{-- Status --}}
+                        <div class="flex items-center justify-between p-4 rounded-2xl"
+                             :class="{
+                                'bg-yellow-50 border border-yellow-200': detail && detail.status === 'pending',
+                                'bg-green-50 border border-green-200': detail && detail.status === 'approved',
+                                'bg-red-50 border border-red-200': detail && detail.status === 'rejected'
+                             }">
+                            <span class="font-black text-sm"
+                                  :class="{
+                                    'text-yellow-800': detail && detail.status === 'pending',
+                                    'text-green-800': detail && detail.status === 'approved',
+                                    'text-red-800': detail && detail.status === 'rejected'
+                                  }"
+                                  x-text="detail ? (detail.status === 'pending' ? '⏳ Menunggu Verifikasi' : detail.status === 'approved' ? '✅ Disetujui' : '❌ Ditolak') : ''">
+                            </span>
+                            <span x-show="detail && detail.status === 'approved'"
+                                  class="text-green-600 font-black text-lg"
+                                  x-text="detail ? '+' + detail.points + ' poin 🏆' : ''">
+                            </span>
+                        </div>
+
+                        {{-- Info grid --}}
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-gray-50 rounded-2xl p-4">
+                                <p class="text-xs text-gray-400 font-semibold mb-1">Jenis Sampah</p>
+                                <p class="font-black text-gray-900" x-text="detail ? detail.type : ''"></p>
                             </div>
-                            <p class="text-green-100 text-sm font-semibold">Terus setor sampah untuk mendapat lebih banyak poin!</p>
+                            <div class="bg-gray-50 rounded-2xl p-4">
+                                <p class="text-xs text-gray-400 font-semibold mb-1">Berat</p>
+                                <p class="font-black text-gray-900" x-text="detail ? detail.weight + ' Kg' : ''"></p>
+                            </div>
+                            <div class="bg-gray-50 rounded-2xl p-4">
+                                <p class="text-xs text-gray-400 font-semibold mb-1">Tanggal Jemput</p>
+                                <p class="font-black text-gray-900 text-sm" x-text="detail ? detail.pickup_date : ''"></p>
+                            </div>
+                            <div class="bg-gray-50 rounded-2xl p-4">
+                                <p class="text-xs text-gray-400 font-semibold mb-1">No. Telepon</p>
+                                <p class="font-black text-gray-900 text-sm" x-text="detail ? detail.phone : ''"></p>
+                            </div>
+                        </div>
+
+                        {{-- Alamat --}}
+                        <div class="bg-gray-50 rounded-2xl p-4">
+                            <p class="text-xs text-gray-400 font-semibold mb-1">📍 Alamat Penjemputan</p>
+                            <p class="font-semibold text-gray-800 text-sm" x-text="detail ? detail.address : ''"></p>
+                            <a x-show="detail && detail.maps_url"
+                               :href="detail ? detail.maps_url : '#'"
+                               target="_blank"
+                               class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 mt-2 font-bold">
+                                🗺️ Lihat di Google Maps
+                            </a>
+                        </div>
+
+                        {{-- Catatan --}}
+                        <div x-show="detail && detail.notes" class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                            <p class="text-xs text-amber-600 font-bold mb-1">📝 Catatan</p>
+                            <p class="text-sm text-gray-700" x-text="detail ? detail.notes : ''"></p>
+                        </div>
+
+                        {{-- Ditangani oleh --}}
+                        <div x-show="detail && detail.handled_by" class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
+                            <p class="text-xs text-indigo-500 font-bold mb-1">🛡️ Ditangani Oleh</p>
+                            <p class="font-black text-indigo-800 text-sm" x-text="detail ? detail.handled_by : ''"></p>
                         </div>
                     </div>
 
-                    <!-- CTA Card -->
-                    <div class="md:col-span-2 group bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-gray-100/50 hover:shadow-3xl transition duration-300 flex flex-col justify-between transform hover:scale-102 hover:-translate-y-1">
-                        <div class="mb-6">
-                            <h3 class="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">♻️ Setor Sampah</h3>
-                            <p class="text-gray-600 mt-2 font-medium">Ubah sampah Anda menjadi poin reward! Setiap setor adalah kontribusi untuk planet yang lebih hijau.</p>
-                        </div>
-                        <button @click="isModalOpen = true" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 py-4 rounded-2xl font-bold shadow-lg hover:shadow-2xl transition duration-300 transform hover:scale-105 flex items-center justify-center gap-3 text-lg">
-                            <span class="text-2xl">➕</span>
-                            <span>Setor Baru Sekarang</span>
-                            <span class="text-2xl animate-pulse">→</span>
+                    {{-- Footer --}}
+                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+                        <button @click="isDetailOpen = false"
+                            class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold transition duration-200">
+                            Tutup
                         </button>
                     </div>
                 </div>
+            </div>
+        </template>
 
-                <!-- Riwayat Setoran -->
-                <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-100/50 overflow-hidden">
-                    <div class="p-8 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-                        <h3 class="text-2xl font-black text-gray-900">📜 Riwayat Setoran Anda</h3>
-                        <p class="text-sm text-gray-500 mt-1">Pantau status semua setoran sampah Anda</p>
-                    </div>
-                    
-                    <div class="p-8">
-                        @if($pickups->count() > 0)
-                            <div class="space-y-4">
-                                @foreach($pickups as $pickup)
-                                    <div class="group bg-gradient-to-r from-gray-50 to-gray-50 hover:from-green-50 hover:to-emerald-50 rounded-2xl p-6 border border-gray-200 hover:border-green-300 transition duration-300 transform hover:scale-102 hover:shadow-lg">
-                                        <div class="flex justify-between items-start flex-col md:flex-row md:items-center gap-4">
-                                            <!-- Left Side Info -->
-                                            <div class="flex-1">
-                                                <div class="flex items-center gap-4 mb-3">
-                                                    <div class="text-3xl">
-                                                        @switch($pickup->type)
-                                                            @case('Plastik') 🪴 @break
-                                                            @case('Kertas') 📄 @break
-                                                            @case('Logam') 🔩 @break
-                                                            @case('Kaca') 🥛 @break
-                                                            @case('Organik') 🍂 @break
-                                                            @case('Elektronik') ⚡ @break
-                                                            @case('Lainnya') 📦 @break
-                                                            @default ♻️
-                                                        @endswitch
-                                                    </div>
-                                                    <div>
-                                                        <p class="font-black text-gray-900 text-lg">{{ $pickup->type }}</p>
-                                                        <p class="text-sm text-gray-500 flex items-center gap-2">
-                                                            <span>⚖️</span>
-                                                            <span>{{ $pickup->weight }} Kg</span>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <p class="text-xs text-gray-400 flex items-center gap-2 mb-2">
-                                                    <span>📅</span>
-                                                    <span>{{ \Carbon\Carbon::parse($pickup->pickup_date)->format('d M Y') }}</span>
-                                                </p>
-                                                <p class="text-xs text-gray-500 flex items-center gap-2">
-                                                    <span>📍</span>
-                                                    <span class="line-clamp-1">{{ Str::limit($pickup->address, 50, '...') }}</span>
-                                                </p>
-                                            </div>
+        {{-- ═══ MODAL FORM SETORAN BARU ═══ --}}
+        <template x-teleport="body">
+            <div x-show="isModalOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-300"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/60 backdrop-blur-md p-4"
+                 style="display: none;">
 
-                                            <!-- Right Side Status & Points -->
-                                            <div class="flex-shrink-0 text-right">
-                                                <div class="mb-3">
-                                                    @if($pickup->status === 'pending')
-                                                        <span class="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                                                            <span class="w-2 h-2 bg-yellow-600 rounded-full animate-pulse"></span>
-                                                            ⏳ Menunggu
-                                                        </span>
-                                                    @elseif($pickup->status === 'approved')
-                                                        <span class="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                                                            <span class="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
-                                                            ✅ Disetujui
-                                                        </span>
-                                                    @else
-                                                        <span class="inline-flex items-center gap-2 bg-red-100 text-red-800 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                                                            <span class="w-2 h-2 bg-red-600 rounded-full"></span>
-                                                            ❌ Ditolak
-                                                        </span>
-                                                    @endif
-                                                </div>
-
-                                                <div class="mb-2">
-                                                    @if($pickup->status === 'approved')
-                                                        <p class="text-2xl font-black text-green-600 drop-shadow-lg">+{{ $pickup->points_earned }} 🏆</p>
-                                                    @else
-                                                        <p class="text-sm text-gray-400">Poin: Pending</p>
-                                                    @endif
-                                                </div>
-
-                                                <!-- Batalkan Button -->
-                                                @if($pickup->status === 'pending')
-                                                    <form action="{{ route('pickups.destroy', $pickup->id) }}" method="POST" onsubmit="return confirm('⚠️ Yakin ingin membatalkan setoran ini? Tindakan ini tidak bisa dibatalkan!');" class="inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 font-bold px-3 py-2 border border-red-200 rounded-lg transition duration-300 transform hover:scale-110 flex items-center gap-2">
-                                                            <span>🗑️</span>
-                                                            <span>Batalkan</span>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="text-center py-16">
-                                <div class="text-6xl mb-4">🌱</div>
-                                <p class="text-gray-500 text-lg font-semibold mb-2">Belum ada setoran sampah</p>
-                                <p class="text-gray-400 text-sm">Mulai sekarang dengan menekan tombol "Setor Baru" untuk mendapatkan poin pertama Anda!</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Modal Form Setor Sampah -->
-                <div x-show="isModalOpen" 
-                     style="display: none;" 
+                <div @click.away="isModalOpen = false"
+                     x-show="isModalOpen"
                      x-transition:enter="transition ease-out duration-300"
-                     x-transition:enter-start="opacity-0"
-                     x-transition:enter-end="opacity-100"
+                     x-transition:enter-start="opacity-0 transform scale-90"
+                     x-transition:enter-end="opacity-100 transform scale-100"
                      x-transition:leave="transition ease-in duration-300"
-                     x-transition:leave-start="opacity-100"
-                     x-transition:leave-end="opacity-0"
-                     class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-md overflow-y-auto">
-                    
-                    <div @click.away="isModalOpen = false" 
-                         x-show="isModalOpen"
-                         x-transition:enter="transition ease-out duration-300"
-                         x-transition:enter-start="opacity-0 transform scale-90"
-                         x-transition:enter-end="opacity-100 transform scale-100"
-                         x-transition:leave="transition ease-in duration-300"
-                         x-transition:leave-start="opacity-100 transform scale-100"
-                         x-transition:leave-end="opacity-0 transform scale-90"
-                         class="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl relative border border-gray-100 overflow-hidden my-8">
-                        
-                        <!-- Decorative Top Border -->
-                        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500"></div>
+                     x-transition:leave-start="opacity-100 transform scale-100"
+                     x-transition:leave-end="opacity-0 transform scale-90"
+                     class="bg-white rounded-3xl w-full max-w-lg shadow-2xl relative border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]">
 
-                        <!-- Header -->
-                        <div class="flex justify-between items-center mb-8">
-                            <div>
-                                <h3 class="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">📦 Ajukan Setor Sampah</h3>
-                                <p class="text-sm text-gray-500 mt-1">Isi form untuk mengajukan setor sampah Anda</p>
-                            </div>
-                            <button @click="isModalOpen = false" class="text-3xl font-bold text-gray-400 hover:text-red-500 transition duration-300 transform hover:rotate-90 hover:scale-110">&times;</button>
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500 z-20"></div>
+
+                    <div class="sticky top-0 bg-white/95 backdrop-blur-sm z-10 px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">📦 Ajukan Setor Sampah</h3>
+                            <p class="text-sm text-gray-500 mt-1">Isi form untuk mengajukan setor sampah</p>
                         </div>
+                        <button type="button" @click="isModalOpen = false" class="text-3xl font-bold text-gray-400 hover:text-red-500 transition duration-300">&times;</button>
+                    </div>
 
-                        <!-- Form -->
-                        <form method="POST" action="{{ route('pickups.store') }}" class="space-y-5">
+                    <div class="p-8 overflow-y-auto">
+                        <form method="POST" action="{{ route('pickups.store') }}" enctype="multipart/form-data" class="space-y-5">
                             @csrf
-                            
-                            <!-- Jenis Sampah Select -->
+
+                            {{-- Jenis Sampah --}}
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">♻️</span>
-                                    <span>Pilih Jenis Sampah</span>
-                                </label>
-                                <select name="type" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none focus:ring-4 focus:ring-green-200 transition duration-300 font-semibold bg-gray-50 focus:bg-white appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml;utf8,<svg fill=\'%23059669\' height=\'24\' viewBox=\'0 0 24 24\' width=\'24\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M7 10l5 5 5-5z\'/></svg>'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1.5em 1.5em; padding-right: 2.5rem;">
-                                    <option value="" disabled selected class="text-gray-400">Pilih jenis sampah...</option>
-                                    <option value="Plastik" class="bg-white text-gray-900">🪴 Plastik</option>
-                                    <option value="Kertas" class="bg-white text-gray-900">📄 Kertas</option>
-                                    <option value="Logam" class="bg-white text-gray-900">🔩 Logam</option>
-                                    <option value="Kaca" class="bg-white text-gray-900">🥛 Kaca</option>
-                                    <option value="Organik" class="bg-white text-gray-900">🍂 Organik</option>
-                                    <option value="Elektronik" class="bg-white text-gray-900">⚡ Elektronik</option>
-                                    <option value="Lainnya" class="bg-white text-gray-900">📦 Lainnya</option>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">♻️ Jenis Sampah</label>
+                                <select name="type" required class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 font-semibold bg-gray-50">
+                                    <option value="" disabled selected>Pilih jenis sampah...</option>
+                                    <option value="Plastik" {{ old('type') === 'Plastik' ? 'selected' : '' }}>🪴 Plastik</option>
+                                    <option value="Kertas" {{ old('type') === 'Kertas' ? 'selected' : '' }}>📄 Kertas</option>
+                                    <option value="Logam" {{ old('type') === 'Logam' ? 'selected' : '' }}>🔩 Logam</option>
+                                    <option value="Kaca" {{ old('type') === 'Kaca' ? 'selected' : '' }}>🥛 Kaca</option>
+                                    <option value="Organik" {{ old('type') === 'Organik' ? 'selected' : '' }}>🍂 Organik</option>
+                                    <option value="Elektronik" {{ old('type') === 'Elektronik' ? 'selected' : '' }}>⚡ Elektronik</option>
+                                    <option value="Lainnya" {{ old('type') === 'Lainnya' ? 'selected' : '' }}>📦 Lainnya</option>
                                 </select>
-                                @error('type')
-                                    <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                                @enderror
+                                @error('type') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
                             </div>
 
-                            <!-- Berat Input -->
+                            {{-- Berat --}}
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">⚖️</span>
-                                    <span>Berat Sampah (Kg)</span>
-                                </label>
-                                <input type="number" name="weight" step="0.1" required placeholder="Contoh: 5.5" value="{{ old('weight') }}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none focus:ring-4 focus:ring-green-200 transition duration-300 font-semibold bg-gray-50 focus:bg-white @error('weight') border-red-500 @enderror" />
-                                <p class="text-xs text-gray-400 mt-2">Masukkan berat dalam kilogram (minimal 0.1 Kg)</p>
-                                @error('weight')
-                                    <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                                @enderror
+                                <label class="block text-sm font-bold text-gray-700 mb-2">⚖️ Berat Sampah (Kg)</label>
+                                <input type="number" name="weight" step="0.1" required placeholder="Contoh: 5.5" value="{{ old('weight') }}"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 font-semibold bg-gray-50" />
+                                @error('weight') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
                             </div>
 
-                            <!-- Tanggal Pickup Input -->
+                            {{-- Tanggal --}}
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">📅</span>
-                                    <span>Tanggal Penjemputan</span>
-                                </label>
-                                <input type="date" name="pickup_date" required min="{{ date('Y-m-d') }}" value="{{ old('pickup_date') }}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none focus:ring-4 focus:ring-green-200 transition duration-300 font-semibold bg-gray-50 focus:bg-white cursor-pointer @error('pickup_date') border-red-500 @enderror" />
-                                <p class="text-xs text-gray-400 mt-2">Pilih tanggal hari ini atau tanggal mendatang</p>
-                                @error('pickup_date')
-                                    <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                                @enderror
+                                <label class="block text-sm font-bold text-gray-700 mb-2">📅 Tanggal Penjemputan</label>
+                                <input type="date" name="pickup_date" required min="{{ date('Y-m-d') }}" value="{{ old('pickup_date') }}"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 font-semibold bg-gray-50" />
+                                @error('pickup_date') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
                             </div>
 
-                            <!-- Alamat Input -->
+                            {{-- Alamat + GPS --}}
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">📍</span>
-                                    <span>Alamat Penjemputan</span>
-                                </label>
-                                <textarea name="address" required placeholder="Contoh: Jl. Merdeka No. 123, Kota Bandung, Jawa Barat 40123" rows="3" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none focus:ring-4 focus:ring-green-200 transition duration-300 font-semibold bg-gray-50 focus:bg-white @error('address') border-red-500 @enderror">{{ old('address') }}</textarea>
-                                <p class="text-xs text-gray-400 mt-2">Alamat lengkap untuk memudahkan penjemput</p>
-                                @error('address')
-                                    <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                                @enderror
+                                <label class="block text-sm font-bold text-gray-700 mb-2">📍 Alamat Penjemputan</label>
+                                <textarea name="address" id="addressInput" required placeholder="Contoh: Jl. Merdeka No. 123, Bandung" rows="2"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 font-semibold bg-gray-50">{{ old('address') }}</textarea>
+                                @error('address') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
+
+                                <button type="button" id="detectLocationBtn" onclick="detectLocation()"
+                                    class="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-200 rounded-xl font-bold text-sm transition duration-300">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <span id="detectBtnText">Deteksi Lokasi Otomatis (GPS)</span>
+                                </button>
+                                <div id="gpsStatus" class="hidden mt-2 p-3 rounded-xl text-xs font-semibold"></div>
+                                <div id="mapContainer" class="hidden mt-3 rounded-xl overflow-hidden border-2 border-blue-200 shadow-sm">
+                                    <div id="map" style="height: 200px; width: 100%;"></div>
+                                    <div class="bg-blue-50 px-4 py-2 text-xs text-blue-600 font-semibold flex items-center gap-2">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        Seret pin untuk menyesuaikan lokasi
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- Nomor Telepon Input -->
+                            <input type="hidden" name="latitude" id="latInput" value="{{ old('latitude') }}">
+                            <input type="hidden" name="longitude" id="lngInput" value="{{ old('longitude') }}">
+
+                            {{-- Telepon --}}
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                    <span class="text-lg">📱</span>
-                                    <span>Nomor Telepon</span>
-                                </label>
-                                <input type="tel" name="phone" required placeholder="Contoh: 0812345678 atau +6212345678" value="{{ old('phone') }}" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none focus:ring-4 focus:ring-green-200 transition duration-300 font-semibold bg-gray-50 focus:bg-white @error('phone') border-red-500 @enderror" />
-                                <p class="text-xs text-gray-400 mt-2">Nomor WhatsApp atau telepon yang aktif</p>
-                                @error('phone')
-                                    <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
-                                @enderror
+                                <label class="block text-sm font-bold text-gray-700 mb-2">📱 Nomor Telepon</label>
+                                <input type="tel" name="phone" required placeholder="Contoh: 0812345678" value="{{ old('phone') }}"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 font-semibold bg-gray-50" />
+                                @error('phone') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
                             </div>
 
-                            <!-- Action Buttons -->
-                            <div class="flex gap-3 mt-8 pt-6 border-t border-gray-200">
-                                <button type="button" 
-                                        @click="isModalOpen = false" 
-                                        class="flex-1 px-5 py-3 text-gray-700 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-100 hover:border-gray-400 transition duration-300 transform hover:scale-105">
+                            {{-- Foto Sampah --}}
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    📸 Foto Sampah
+                                    <span class="text-red-500">*</span>
+                                    <span class="text-gray-400 font-normal text-xs ml-1">(Wajib, maks 5MB)</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="file" name="photo" id="photoInput" accept="image/*" required
+                                           @change="handlePhoto($event)"
+                                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                    <div class="border-2 border-dashed border-gray-300 hover:border-green-400 rounded-xl p-6 text-center transition duration-300 bg-gray-50 hover:bg-green-50">
+                                        <div x-show="photoPreview" class="mb-3">
+                                            <img :src="photoPreview" class="w-full max-h-40 object-cover rounded-xl shadow-sm">
+                                        </div>
+                                        <div x-show="!photoPreview">
+                                            <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                                            </svg>
+                                            <p class="text-sm text-gray-500 font-semibold">Klik atau drag foto sampah</p>
+                                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WEBP • Maks 5MB</p>
+                                        </div>
+                                        <p x-show="photoName" x-text="'📎 ' + photoName" class="text-xs text-green-600 font-bold mt-2 truncate"></p>
+                                    </div>
+                                </div>
+                                @error('photo') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
+                            </div>
+
+                            {{-- Catatan --}}
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">
+                                    📝 Catatan Tambahan
+                                    <span class="text-gray-400 font-normal text-xs ml-1">(Opsional)</span>
+                                </label>
+                                <textarea name="notes" rows="3"
+                                    placeholder="Contoh: Sampah sudah dipilah, ada beberapa botol plastik besar..."
+                                    maxlength="500"
+                                    class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:outline-none transition duration-300 font-medium bg-gray-50 text-sm resize-none">{{ old('notes') }}</textarea>
+                                @error('notes') <p class="text-red-500 text-xs mt-2">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div class="flex gap-3 pt-6 border-t border-gray-200">
+                                <button type="button" @click="isModalOpen = false"
+                                    class="flex-1 px-5 py-3 text-gray-700 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-100 transition duration-300">
                                     Batal
                                 </button>
-                                <button type="submit" class="flex-1 px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-105 flex items-center justify-center gap-2">
-                                    <span>✅</span>
-                                    <span>Ajukan Sekarang</span>
+                                <button type="submit"
+                                    class="flex-1 px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition duration-300 flex items-center justify-center gap-2">
+                                    ✅ Ajukan Sekarang
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
-            @endif
-        </div>
+            </div>
+        </template>
 
-        <!-- Chart.js Script -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            // Data dari PHP
-            const wasteByType = @json($wasteByType ?? []);
-            const approvedCount = {{ $approvedPickups ?? 0 }};
-            const pendingCount = {{ $pendingPickups ?? 0 }};
-            const rejectedCount = {{ $rejectedPickups ?? 0 }};
-            const sevenDaysData = @json($last7Days ?? []);
-
-            // Bar Chart - Waste by Type
-            const wasteCtx = document.getElementById('wasteByTypeChart');
-            if (wasteCtx) {
-                new Chart(wasteCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: Object.keys(wasteByType),
-                        datasets: [{
-                            label: 'Total Berat (Kg)',
-                            data: Object.values(wasteByType),
-                            backgroundColor: [
-                                '#10b981',
-                                '#14b8a6',
-                                '#06b6d4',
-                                '#8b5cf6',
-                                '#ec4899',
-                                '#f59e0b',
-                                '#6b7280'
-                            ],
-                            borderRadius: 8,
-                            hoverBackgroundColor: 'rgba(0, 0, 0, 0.1)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + ' kg';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Pie Chart - Approval Rate
-            const approvalCtx = document.getElementById('approvalRateChart');
-            if (approvalCtx) {
-                new Chart(approvalCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Approved', 'Pending', 'Rejected'],
-                        datasets: [{
-                            data: [approvedCount, pendingCount, rejectedCount],
-                            backgroundColor: [
-                                '#10b981',
-                                '#f59e0b',
-                                '#ef4444'
-                            ],
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Line Chart - 7 Days Trend
-            const trendCtx = document.getElementById('sevenDaysTrendChart');
-            if (trendCtx) {
-                new Chart(trendCtx, {
-                    type: 'line',
-                    data: {
-                        labels: Object.keys(sevenDaysData),
-                        datasets: [{
-                            label: 'Sampah Diterima (Kg)',
-                            data: Object.values(sevenDaysData),
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#10b981',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2,
-                            pointRadius: 5,
-                            pointHoverRadius: 7
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                display: true
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + ' kg';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Search & Filter Functionality
-            const searchInput = document.querySelector('input[placeholder*="Cari"]');
-            const filterStatus = document.querySelector('select:nth-of-type(1)');
-            const filterType = document.querySelector('select:nth-of-type(2)');
-
-            function filterTable() {
-                const rows = document.querySelectorAll('.searchable-row');
-                const search = searchInput.value.toLowerCase();
-                const status = filterStatus.value;
-                const type = filterType.value;
-
-                rows.forEach(row => {
-                    const name = row.getAttribute('data-name');
-                    const email = row.getAttribute('data-email');
-                    const rowStatus = row.getAttribute('data-status');
-                    const rowType = row.getAttribute('data-type');
-
-                    const matchSearch = name.includes(search) || email.includes(search);
-                    const matchStatus = !status || rowStatus === status;
-                    const matchType = !type || rowType === type;
-
-                    row.style.display = matchSearch && matchStatus && matchType ? '' : 'none';
-                });
-            }
-
-            if (searchInput) searchInput.addEventListener('input', filterTable);
-            if (filterStatus) filterStatus.addEventListener('change', filterTable);
-            if (filterType) filterType.addEventListener('change', filterTable);
-        </script>
-
-        <!-- Tailwind Keyframe Animation di CSS -->
         <style>
             @keyframes blob {
                 0%, 100% { transform: translate(0, 0) scale(1); }
@@ -788,40 +481,92 @@
                 50% { transform: translate(-20px, 20px) scale(0.9); }
                 75% { transform: translate(50px, 50px) scale(1.05); }
             }
-            
-            .animate-blob {
-                animation: blob 7s infinite;
-            }
-            
-            .animation-delay-2000 {
-                animation-delay: 2s;
-            }
-            
-            .animation-delay-4000 {
-                animation-delay: 4s;
-            }
-
-            .hover\:scale-102:hover {
-                transform: scale(1.02);
-            }
-
-            .hover\:-translate-y-1:hover {
-                transform: translateY(-0.25rem);
-            }
-
-            .line-clamp-1 {
-                display: -webkit-box;
-                -webkit-line-clamp: 1;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-
-            .line-clamp-2 {
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
+            .animate-blob { animation: blob 7s infinite; }
+            .animation-delay-2000 { animation-delay: 2s; }
+            .animation-delay-4000 { animation-delay: 4s; }
         </style>
     </div>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map = null;
+        let marker = null;
+
+        function initMap(lat, lng) {
+            const mapContainer = document.getElementById('mapContainer');
+            mapContainer.classList.remove('hidden');
+            if (map) { map.remove(); map = null; }
+            setTimeout(() => {
+                map = L.map('map').setView([lat, lng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                const greenIcon = L.divIcon({
+                    html: `<div style="width:36px;height:36px;background:linear-gradient(135deg,#10b981,#059669);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 4px 12px rgba(16,185,129,0.5);"></div>`,
+                    className: '', iconSize: [36,36], iconAnchor: [18,36],
+                });
+                marker = L.marker([lat, lng], { draggable: true, icon: greenIcon }).addTo(map);
+                marker.on('dragend', function(e) {
+                    const pos = e.target.getLatLng();
+                    document.getElementById('latInput').value = pos.lat.toFixed(8);
+                    document.getElementById('lngInput').value = pos.lng.toFixed(8);
+                    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.lat}&lon=${pos.lng}&format=json`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.display_name) document.getElementById('addressInput').value = data.display_name;
+                        });
+                });
+                document.getElementById('latInput').value = lat.toFixed(8);
+                document.getElementById('lngInput').value = lng.toFixed(8);
+            }, 100);
+        }
+
+        function detectLocation() {
+            const btn = document.getElementById('detectLocationBtn');
+            const btnText = document.getElementById('detectBtnText');
+            const status = document.getElementById('gpsStatus');
+            if (!navigator.geolocation) {
+                status.className = 'mt-2 p-3 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200';
+                status.textContent = '❌ Browser kamu tidak mendukung GPS';
+                status.classList.remove('hidden');
+                return;
+            }
+            btnText.textContent = 'Mendeteksi lokasi...';
+            btn.disabled = true;
+            btn.classList.add('opacity-60');
+            status.className = 'mt-2 p-3 rounded-xl text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200';
+            status.textContent = '📡 Mengakses GPS, mohon tunggu...';
+            status.classList.remove('hidden');
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    initMap(lat, lng);
+                    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.display_name) document.getElementById('addressInput').value = data.display_name;
+                            status.className = 'mt-2 p-3 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200';
+                            status.textContent = '✅ Lokasi berhasil dideteksi! Seret pin untuk menyesuaikan.';
+                            btnText.textContent = 'Lokasi Terdeteksi ✓';
+                            btn.classList.remove('opacity-60');
+                            btn.disabled = false;
+                        });
+                },
+                function(error) {
+                    let msg = '❌ Gagal mendeteksi lokasi';
+                    if (error.code === 1) msg = '❌ Izin lokasi ditolak. Aktifkan GPS di browser.';
+                    if (error.code === 2) msg = '❌ Lokasi tidak tersedia. Coba lagi.';
+                    if (error.code === 3) msg = '❌ Timeout. Coba lagi.';
+                    status.className = 'mt-2 p-3 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200';
+                    status.textContent = msg;
+                    btnText.textContent = 'Deteksi Lokasi Otomatis (GPS)';
+                    btn.classList.remove('opacity-60');
+                    btn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    </script>
 </x-app-layout>
