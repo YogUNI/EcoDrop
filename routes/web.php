@@ -65,6 +65,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/conversations/{id}/messages', [ConversationController::class, 'messages'])->name('conversations.messages');
     Route::post('/conversations/{id}/messages', [ConversationController::class, 'send'])->name('conversations.send');
     Route::post('/conversations/{id}/handle', [ConversationController::class, 'handle'])->name('conversations.handle');
+    Route::post('/conversations/{id}/close', [ConversationController::class, 'close'])->name('conversations.close');
+    Route::post('/conversations/{id}/reopen', [ConversationController::class, 'reopen'])->name('conversations.reopen');
     Route::post('/conversations/{id}/pickup-card/{pickupId}', [ConversationController::class, 'sendPickupCard'])->name('conversations.pickup-card');
 });
 

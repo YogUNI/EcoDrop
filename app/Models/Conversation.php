@@ -10,12 +10,16 @@ class Conversation extends Model
         'user_id',
         'assigned_admin_id',
         'is_handled',
+        'is_closed',
+        'closed_at',
         'last_message_at',
     ];
 
     protected $casts = [
         'is_handled'      => 'boolean',
+        'is_closed'       => 'boolean',
         'last_message_at' => 'datetime',
+        'closed_at'       => 'datetime',
     ];
 
     public function user()

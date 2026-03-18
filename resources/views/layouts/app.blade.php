@@ -68,11 +68,23 @@
                     ->first();
                 $widgetConversations = $conv ? collect([$conv]) : collect();
             } else {
-                $widgetConversations = \App\Models\Conversation::with(['user', 'lastMessage', 'assignedAdmin'])
-                    ->orderByDesc('updated_at')
-                    ->take(30)
-                    ->get()
-                    ->filter(fn($c) => $c->user !== null);
+                if ($authRole === 'super_admin') {
+                    $widgetConversations = \App\Models\Conversation::with(['user', 'lastMessage', 'assignedAdmin'])
+                        ->orderByDesc('updated_at')
+                        ->take(30)
+                        ->get()
+                        ->filter(fn($c) => $c->user !== null);
+                } else {
+                    $widgetConversations = \App\Models\Conversation::with(['user', 'lastMessage', 'assignedAdmin'])
+                        ->where(function($q) use ($authUserId) {
+                            $q->where('is_handled', false)
+                              ->orWhere('assigned_admin_id', $authUserId);
+                        })
+                        ->orderByDesc('updated_at')
+                        ->take(30)
+                        ->get()
+                        ->filter(fn($c) => $c->user !== null);
+                }
             }
         @endphp
 
@@ -105,7 +117,7 @@
                      x-transition:leave-start="opacity-100"
                      x-transition:leave-end="opacity-0 transform translate-y-4 scale-95"
                      class="fixed bottom-24 right-6 z-[899] w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
-                     style="height: 560px; display: none;">
+                     style="height: 580px; display: none;">
 
                     {{-- Header --}}
                     <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-5 py-4 flex-shrink-0">
@@ -129,12 +141,26 @@
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-white font-black text-sm truncate" x-text="currentConv ? currentConv.name : ''"></p>
-                                <div x-show="currentConv && currentConv.is_handled" class="flex items-center gap-1">
+                                {{-- Status: closed --}}
+                                <p x-show="currentConv && currentConv.is_closed" class="text-red-200 text-xs">🔒 Sesi telah diakhiri</p>
+                                {{-- Status: handled --}}
+                                <div x-show="currentConv && currentConv.is_handled && !currentConv.is_closed" class="flex items-center gap-1">
                                     <span class="w-1.5 h-1.5 bg-green-300 rounded-full animate-pulse"></span>
                                     <p class="text-green-100 text-xs" x-text="'Ditangani: ' + (currentConv ? currentConv.assigned_admin || 'Admin' : '')"></p>
                                 </div>
-                                <p x-show="currentConv && !currentConv.is_handled" class="text-yellow-200 text-xs">⏳ Menunggu admin</p>
+                                {{-- Status: waiting --}}
+                                <p x-show="currentConv && !currentConv.is_handled && !currentConv.is_closed" class="text-yellow-200 text-xs">⏳ Menunggu admin</p>
                             </div>
+                            {{-- Tombol Akhiri Layanan (hanya admin, hanya kalau sudah handled dan belum closed) --}}
+                            @if($isAdminRole)
+                            <button x-show="currentConv && currentConv.is_handled && !currentConv.is_closed"
+                                @click="endService()"
+                                :disabled="ending"
+                                class="flex-shrink-0 px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-xs transition disabled:opacity-50 flex items-center gap-1">
+                                <span x-show="!ending">🔒 Akhiri</span>
+                                <span x-show="ending">...</span>
+                            </button>
+                            @endif
                         </div>
                     </div>
 
@@ -153,6 +179,7 @@
                                     name: 'Admin EcoDrop',
                                     photo: 'https://ui-avatars.com/api/?name=Admin+EcoDrop&background=10b981&color=fff&bold=true',
                                     is_handled: {{ $cv->is_handled ? 'true' : 'false' }},
+                                    is_closed: {{ $cv->is_closed ? 'true' : 'false' }},
                                     assigned_admin: '{{ $cv->assignedAdmin?->name ?? '' }}'
                                 })"
                                     class="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition text-left border-b border-gray-50">
@@ -174,6 +201,9 @@
                                         <p class="text-xs text-gray-400 truncate">
                                             {{ $lastCvMsg ? Str::limit($lastCvMsg->content, 40) : 'Mulai chat dengan admin!' }}
                                         </p>
+                                        @if($cv->is_closed)
+                                            <p class="text-xs text-red-400 font-semibold mt-0.5">🔒 Sesi diakhiri</p>
+                                        @endif
                                     </div>
                                 </button>
                             @else
@@ -201,6 +231,7 @@
                                     name: '{{ addslashes($cv->user->name) }}',
                                     photo: '{{ $cv->user->getPhotoUrl() }}',
                                     is_handled: {{ $cv->is_handled ? 'true' : 'false' }},
+                                    is_closed: {{ $cv->is_closed ? 'true' : 'false' }},
                                     assigned_admin: '{{ addslashes($cv->assignedAdmin?->name ?? '') }}'
                                 })"
                                     class="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition text-left border-b border-gray-50">
@@ -210,7 +241,9 @@
                                                  onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode($cv->user->name) }}&background=6366f1&color=fff&bold=true'"
                                                  class="w-full h-full object-cover">
                                         </div>
-                                        @if(!$cv->is_handled)
+                                        @if($cv->is_closed)
+                                            <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-400 rounded-full border-2 border-white"></span>
+                                        @elseif(!$cv->is_handled)
                                             <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-yellow-400 rounded-full border-2 border-white"></span>
                                         @else
                                             <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></span>
@@ -231,8 +264,9 @@
                                         <p class="text-xs text-gray-400 truncate">
                                             {{ $lastCvMsg ? Str::limit($lastCvMsg->content, 38) : 'Belum ada pesan' }}
                                         </p>
-                                        <p class="text-xs mt-0.5 {{ $cv->is_handled ? 'text-green-500' : 'text-yellow-500' }} font-semibold">
-                                            {{ $cv->is_handled ? '✓ Ditangani: ' . ($cv->assignedAdmin?->name ?? 'Admin') : '⏳ Belum ditangani' }}
+                                        <p class="text-xs mt-0.5 font-semibold
+                                            {{ $cv->is_closed ? 'text-red-400' : ($cv->is_handled ? 'text-green-500' : 'text-yellow-500') }}">
+                                            {{ $cv->is_closed ? '🔒 Sesi diakhiri' : ($cv->is_handled ? '✓ Ditangani: ' . ($cv->assignedAdmin?->name ?? 'Admin') : '⏳ Belum ditangani') }}
                                         </p>
                                     </div>
                                 </button>
@@ -247,16 +281,27 @@
 
                     {{-- Messages Area --}}
                     <div x-show="currentConvId" class="flex-1 overflow-y-auto p-4 space-y-3" id="chatMessages" style="display:none;">
+
+                        {{-- Banner: belum ditangani (admin) --}}
                         @if($isAdminRole)
-                            <div x-show="currentConv && !currentConv.is_handled"
-                                class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
-                                <p class="text-sm font-bold text-yellow-800 mb-3">⏳ Percakapan ini belum ditangani</p>
-                                <button @click="handleConv()" :disabled="handling"
-                                    class="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition disabled:opacity-50">
-                                    <span x-show="!handling">🙋 Tangani Percakapan Ini</span>
-                                    <span x-show="handling">Memproses...</span>
-                                </button>
-                            </div>
+                        <div x-show="currentConv && !currentConv.is_handled && !currentConv.is_closed"
+                            class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-center">
+                            <p class="text-sm font-bold text-yellow-800 mb-3">⏳ Percakapan ini belum ditangani</p>
+                            <button @click="handleConv()" :disabled="handling"
+                                class="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-sm hover:from-green-600 hover:to-emerald-700 transition disabled:opacity-50">
+                                <span x-show="!handling">🙋 Tangani Percakapan Ini</span>
+                                <span x-show="handling">Memproses...</span>
+                            </button>
+                        </div>
+                        @endif
+
+                        {{-- Banner: sesi sudah diakhiri (user) --}}
+                        @if($isUser)
+                        <div x-show="currentConv && currentConv.is_closed"
+                            class="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+                            <p class="text-sm font-bold text-red-700 mb-1">🔒 Sesi layanan telah diakhiri</p>
+                            <p class="text-xs text-red-500">Kirim pesan baru untuk membuka sesi chat baru</p>
+                        </div>
                         @endif
 
                         <div x-show="loading" class="flex justify-center py-8">
@@ -364,9 +409,10 @@
         </div>
 
         <script>
-        const chatMyId   = {{ Auth::id() }};
-        const chatCsrf   = document.querySelector('meta[name="csrf-token"]')?.content;
-        const chatIsUser = {{ $isUser ? 'true' : 'false' }};
+        const chatMyId      = {{ Auth::id() }};
+        const chatCsrf      = document.querySelector('meta[name="csrf-token"]')?.content;
+        const chatIsUser    = {{ $isUser ? 'true' : 'false' }};
+        const chatIsAdmin   = {{ $isAdminRole ? 'true' : 'false' }};
         @verbatim
         document.addEventListener('alpine:init', () => {
             Alpine.data('chatWidget', () => ({
@@ -378,6 +424,7 @@
                 loading: false,
                 sending: false,
                 handling: false,
+                ending: false,
                 unreadTotal: 0,
 
                 async fetchUnread() {
@@ -402,6 +449,7 @@
                                 name: 'Admin EcoDrop',
                                 photo: 'https://ui-avatars.com/api/?name=Admin+EcoDrop&background=10b981&color=fff&bold=true',
                                 is_handled: data.is_handled,
+                                is_closed: data.is_closed,
                                 assigned_admin: data.assigned_admin
                             });
                         }
@@ -433,6 +481,17 @@
                                     this.$nextTick(() => this.scrollBottom());
                                     this.unreadTotal = Math.max(0, this.unreadTotal - 1);
                                 }
+                                // Update is_closed jika ada system message akhiri layanan
+                                if (data.type === 'system' && data.content && data.content.includes('diakhiri')) {
+                                    if (this.currentConv) this.currentConv.is_closed = true;
+                                }
+                                // Update is_closed = false jika reopen
+                                if (data.type === 'system' && data.content && data.content.includes('sesi chat baru')) {
+                                    if (this.currentConv) {
+                                        this.currentConv.is_closed = false;
+                                        this.currentConv.is_handled = false;
+                                    }
+                                }
                             });
                     }
                 },
@@ -461,12 +520,36 @@
                         const data = await res.json();
                         if (data.success) {
                             this.currentConv.is_handled     = true;
+                            this.currentConv.is_closed      = false;
                             this.currentConv.assigned_admin = data.conversation.assigned_admin;
                             this.messages.push(data.message);
                             this.$nextTick(() => this.scrollBottom());
                         }
                     } catch(e) {}
                     this.handling = false;
+                },
+
+                async endService() {
+                    if (this.ending) return;
+                    if (!confirm('Yakin ingin mengakhiri sesi layanan ini?')) return;
+                    this.ending = true;
+                    try {
+                        const res = await fetch(`/conversations/${this.currentConvId}/close`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': chatCsrf
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.currentConv.is_closed = true;
+                            this.messages.push(data.message);
+                            this.$nextTick(() => this.scrollBottom());
+                        }
+                    } catch(e) {}
+                    this.ending = false;
                 },
 
                 async sendMsg() {
@@ -486,6 +569,11 @@
                         });
                         const data = await res.json();
                         this.messages.push(data);
+                        // Kalau user kirim pesan ke closed conv → otomatis reopen
+                        if (chatIsUser && this.currentConv && this.currentConv.is_closed) {
+                            this.currentConv.is_closed   = false;
+                            this.currentConv.is_handled  = false;
+                        }
                         this.$nextTick(() => this.scrollBottom());
                     } catch(e) {
                         this.newMessage = msg;
