@@ -6,6 +6,10 @@ use App\Models\User;
 use App\Models\Pickup;
 use App\Models\ActivityLog;
 
+// ✅ TAMBAHAN UNTUK FITUR EMAIL
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AdminVerifiedMail;
+
 class SuperAdminController extends Controller
 {
     public function dashboard()
@@ -31,8 +35,14 @@ class SuperAdminController extends Controller
 
     public function verifyAdmin($id)
     {
-        User::findOrFail($id)->update(['is_verified' => true]);
-        return back()->with('success', '✅ Admin berhasil diverifikasi!');
+        // ✅ PERBAIKAN: Cari adminnya dulu, simpan di variabel, baru diupdate
+        $admin = User::findOrFail($id);
+        $admin->update(['is_verified' => true]);
+
+        // ✅ TAMBAHAN: Eksekusi kirim email ke alamat email si admin
+        Mail::to($admin->email)->send(new AdminVerifiedMail($admin->name));
+
+        return back()->with('success', '✅ Admin berhasil diverifikasi dan email notifikasi telah dikirim!');
     }
 
     public function deleteAdmin($id)

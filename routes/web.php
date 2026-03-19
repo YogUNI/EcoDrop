@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\Auth\AdminAuthController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -112,5 +113,10 @@ Route::middleware('auth')->get('/conv/{convId}', function ($convId) {
     }
     return view('conv-chat', compact('conv'));
 })->name('conv.chat');
+
+// ─── ADMIN OTP ROUTES (Tanpa middleware auth karena belum login) ──
+Route::get('/admin/otp', [AdminAuthController::class, 'showAdminOtp'])->name('admin.otp.show');
+Route::post('/admin/otp/verify', [AdminAuthController::class, 'verifyAdminOtp'])->name('admin.otp.verify');
+Route::post('/admin/otp/resend', [AdminAuthController::class, 'resendAdminOtp'])->name('admin.otp.resend');
 
 require __DIR__.'/auth.php';

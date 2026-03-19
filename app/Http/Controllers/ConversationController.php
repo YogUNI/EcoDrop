@@ -134,18 +134,31 @@ class ConversationController extends Controller
     // Admin handle conversation
     public function handle($conversationId)
     {
-        $conv  = Conversation::findOrFail($conversationId);
         $admin = Auth::user();
 
         if (!in_array($admin->role, ['admin', 'super_admin'])) {
             abort(403);
         }
 
-        $conv->update([
-            'assigned_admin_id' => $admin->id,
-            'is_handled'        => true,
-            'is_closed'         => false,
-        ]);
+        // ✅ PERBAIKAN: ATOMIC UPDATE (Mencegah Race Condition / Tabrakan)
+        $affectedRows = Conversation::where('id', $conversationId)
+            ->where('is_handled', false)
+            ->update([
+                'assigned_admin_id' => $admin->id,
+                'is_handled'        => true,
+                'is_closed'         => false,
+            ]);
+
+        // ✅ CEK HASIL UPDATE: Jika 0, berarti chat sudah diambil admin lain sepersekian detik yang lalu
+        if ($affectedRows === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => '⚠️ Keduluan! Chat ini baru saja diambil alih oleh admin lain.',
+            ], 409); // Kembalikan error 409 Conflict agar ditangkap oleh UI
+        }
+
+        // Jika lolos (berhasil ambil), fetch data terbarunya
+        $conv = Conversation::findOrFail($conversationId);
 
         $welcomeText = "Halo! 👋 Saya *{$admin->name}* dari tim Admin EcoDrop.\n\nSaya siap membantu kamu. Ada yang bisa saya bantu terkait setoran sampah kamu? 😊";
 

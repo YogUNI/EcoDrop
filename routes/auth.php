@@ -36,6 +36,13 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
+Route::get('/otp', [AuthenticatedSessionController::class, 'showOtp'])
+    ->name('otp.show');
+Route::post('/otp/verify', [AuthenticatedSessionController::class, 'verifyOtp'])
+    ->name('otp.verify');
+Route::post('/otp/resend', [AuthenticatedSessionController::class, 'resendOtp'])
+    ->name('otp.resend');
+
 Route::middleware('auth')->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
