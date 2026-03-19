@@ -2,7 +2,7 @@
 
 **Platform Manajemen Sampah Berbasis Reward**
 
-Platform digital yang memudahkan pengguna untuk mengelola sampah mereka sambil mendapatkan poin reward yang dapat ditukarkan.
+Platform digital yang memudahkan pengguna untuk mengelola sampah mereka sambil mendapatkan poin reward yang dapat ditukarkan. Dibangun dengan sistem multi-role yang tangguh dan fitur komunikasi interaktif.
 
 ---
 
@@ -13,6 +13,7 @@ Platform digital yang memudahkan pengguna untuk mengelola sampah mereka sambil m
 - [Tech Stack](#tech-stack)
 - [Instalasi](#instalasi)
 - [Penggunaan](#penggunaan)
+- [Struktur Database](#struktur-database)
 - [Tim Pengembang](#tim-pengembang)
 - [Lisensi](#lisensi)
 
@@ -25,26 +26,31 @@ EcoDrop adalah aplikasi web yang dirancang untuk mendukung gaya hidup ramah ling
 ### Tujuan:
 - ♻️ Meningkatkan kesadaran pengelolaan sampah
 - 🏆 Memberikan insentif melalui sistem poin reward
-- 👨‍💼 Memudahkan admin dalam verifikasi setoran sampah
+- 👨‍💼 Memudahkan alur komunikasi dan verifikasi antara User, Admin, dan Super Admin
 
 ---
 
 ## ✨ Fitur Utama
 
-### 👤 User (Pengguna)
-- ✅ Register & Login
-- ✅ Dashboard dengan saldo poin
-- ✅ Ajukan setor sampah baru (dengan jenis, berat, tanggal)
-- ✅ Lihat riwayat setoran sampah
-- ✅ Batalkan setoran yang masih pending
-- ✅ Edit profil pengguna
+### 👤 User (Pengguna Biasa)
+- ✅ Register, Login & Edit Profil
+- ✅ Dashboard interaktif dengan informasi saldo poin
+- ✅ Ajukan setor sampah baru (jenis, berat, tanggal)
+- ✅ Riwayat setoran dan pembatalan setoran pending
+- ✅ **[NEW]** Fitur Live Chat untuk bertanya atau komplain ke Admin
 
-### 👑 Admin
+### 🛡️ Admin (Petugas)
 - ✅ Dashboard dengan statistik keseluruhan
-- ✅ Verifikasi & kelola semua setoran sampah
-- ✅ Approve atau reject setoran dengan poin
-- ✅ Hapus data setoran
-- ✅ Lihat riwayat semua user
+- ✅ Verifikasi, kelola (Approve/Reject), dan hapus setoran sampah
+- ✅ **[NEW]** Fitur Live Chat Box untuk menangani pesan dari User
+- ✅ **[NEW]** Anti-Tabrakan (Race Condition Protection): Mencegah dua admin mengambil chat yang sama secara bersamaan
+
+### 👑 Super Admin (Pemilik Sistem)
+- ✅ **[NEW]** Dashboard Monitoring keseluruhan sistem
+- ✅ **[NEW]** Verifikasi/Approve pendaftaran akun Admin baru
+- ✅ **[NEW]** Notifikasi Email Otomatis: Dikirim ke admin saat akunnya diverifikasi (menggunakan Laravel Queue)
+- ✅ **[NEW]** Manajemen User: Fitur Ban/Unban akun user nakal
+- ✅ **[NEW]** Activity Logs: Memantau jejak aktivitas para Admin
 
 ---
 
@@ -56,6 +62,7 @@ EcoDrop adalah aplikasi web yang dirancang untuk mendukung gaya hidup ramah ling
 | **Backend** | PHP Laravel (v11) |
 | **Database** | MySQL |
 | **Authentication** | Laravel Breeze (Session-based) |
+| **Background Jobs** | Laravel Queues & Mailable (Notifikasi Email) |
 | **Version Control** | Git & GitHub |
 
 ---
@@ -88,21 +95,27 @@ EcoDrop adalah aplikasi web yang dirancang untuk mendukung gaya hidup ramah ling
    php artisan key:generate
    ```
 
-4. **Konfigurasi Database**
-   Edit file `.env`:
-   ```
+4. **Konfigurasi Database & Email**
+   Edit file `.env` dan sesuaikan kredensial database serta pengaturan SMTP Email Anda:
+   ```env
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
    DB_PORT=3306
    DB_DATABASE=ecodrop
    DB_USERNAME=root
    DB_PASSWORD=
+
+   # Setup Email (Contoh Mailtrap)
+   MAIL_MAILER=smtp
+   MAIL_HOST=sandbox.smtp.mailtrap.io
+   MAIL_PORT=2525
+   MAIL_USERNAME=your_username
+   MAIL_PASSWORD=your_password
    ```
 
-5. **Migrasi Database**
+5. **Migrasi Database & Seeder**
    ```bash
-   php artisan migrate
-   php artisan db:seed
+   php artisan migrate:fresh --seed
    ```
 
 6. **Build Assets**
@@ -110,64 +123,42 @@ EcoDrop adalah aplikasi web yang dirancang untuk mendukung gaya hidup ramah ling
    npm run build
    ```
 
-7. **Jalankan Server**
+7. **Jalankan Background Worker (Penting untuk Email)**
+   Buka terminal baru dan jalankan untuk memproses antrian email:
+   ```bash
+   php artisan queue:work
+   ```
+
+8. **Jalankan Server**
+   Buka terminal lainnya dan jalankan:
    ```bash
    php artisan serve
    ```
-
    Akses: `http://localhost:8000`
 
 ---
 
 ## 🚀 Penggunaan
 
-### Akun Demo
+### Akun Demo (Jika Menggunakan Seeder)
+- **Super Admin:** `superadmin@example.com` | Pass: `password`
+- **Admin:** `admin@example.com` | Pass: `password`
+- **User:** `user@example.com` | Pass: `password`
 
-**User:**
-- Email: `user@example.com`
-- Password: `password`
-
-**Admin:**
-- Email: `admin@example.com`
-- Password: `password`
-
-### Workflow
-
-1. **Register** akun baru atau login
-2. **Ajukan Setor** sampah dengan mengisi form (jenis, berat, tanggal)
-3. **Admin Verifikasi** setoran dan berikan poin
-4. **User Terima** poin ke saldo mereka
-5. **Lihat Riwayat** untuk tracking semua setoran
+### Workflow Dasar
+1. **User** mendaftar, mengajukan setoran sampah, atau memulai chat jika ada kendala.
+2. **Admin** menangani setoran (verifikasi poin) dan merespon chat dari user.
+3. **Super Admin** memantau log aktivitas, memverifikasi admin baru, dan menindak user nakal.
 
 ---
 
-## 📚 Struktur Database
+## 📚 Struktur Database Inti
 
-### Tabel `users`
-- id (Primary Key)
-- name
-- email
-- password
-- role (admin/user)
-- points
-- timestamps
-
-### Tabel `pickups`
-- id (Primary Key)
-- user_id (Foreign Key)
-- type (Plastik/Kertas)
-- weight (Kg)
-- pickup_date
-- status (pending/approved/rejected)
-- points_earned
-- timestamps
-
-### Tabel `rewards` (Optional)
-- id
-- user_id
-- points_used
-- reward_name
-- timestamps
+- **`users`**: Data otentikasi (id, name, email, role, is_verified, is_banned, points).
+- **`pickups`**: Data transaksi setoran sampah (user_id, type, weight, status, handled_by).
+- **`conversations` & `messages`**: Menyimpan room chat dan riwayat pesan User-Admin.
+- **`activity_logs`**: Mencatat log aktivitas Admin.
+- **`rewards`**: Data penukaran poin.
 
 ---
 
@@ -175,7 +166,9 @@ EcoDrop adalah aplikasi web yang dirancang untuk mendukung gaya hidup ramah ling
 
 | Nama | Role | GitHub |
 |------|------|--------|
-| YogUNIHalo | Full Stack | [@YogUNI](https://github.com/YogUNI) |
+| Yoga Gusti R | Full Stack | [@YogUNI](https://github.com/YogUNI) |
+| M Vicky Haikal | Frontend | - |
+| Thomas Setiawan | UI/UX Designer | - |
 
 ---
 
