@@ -167,8 +167,8 @@ EcoDrop adalah aplikasi web yang dirancang untuk mendukung gaya hidup ramah ling
 | Nama | Role | GitHub |
 |------|------|--------|
 | Yoga Gusti R | Full Stack | [@YogUNI](https://github.com/YogUNI) |
-| M Vicky Haikal | Frontend | - |
-| Thomas Setiawan | UI/UX Designer | - |
+| M Vicky Haikal | Frontend | [@MhmmdVckyHaikal](https://github.com/MhmmdVckyHaikal) |
+| Thomas Setiawan | UI/UX Designer | [@Thvmxxs](https://github.com/Thvmxxs) |
 
 ---
 
