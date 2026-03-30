@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class OtpCode extends Model
 {
     protected $fillable = [
-        'user_id',
-        'code',
-        'expires_at',
-        'is_used',
-    ];
+    'user_id',
+    'code',
+    'type',
+    'expires_at',
+    'is_used',
+   ];
 
     protected $casts = [
         'expires_at' => 'datetime',

@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\AdminAuthController;
+use App\Http\Controllers\ForgotPasswordOtpController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -23,19 +24,25 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
-    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
+    // ─── Forgot Password via OTP ──────────────────────────────────
+    Route::get('forgot-password', [ForgotPasswordOtpController::class, 'showEmail'])
         ->name('password.request');
-
-    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+    Route::post('forgot-password', [ForgotPasswordOtpController::class, 'sendOtp'])
         ->name('password.email');
-
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
-        ->name('password.reset');
-
-    Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->name('password.store');
+    Route::get('forgot-password/otp', [ForgotPasswordOtpController::class, 'showOtp'])
+        ->name('password.otp.show');
+    Route::post('forgot-password/otp/verify', [ForgotPasswordOtpController::class, 'verifyOtp'])
+        ->name('password.otp.verify');
+    Route::post('forgot-password/otp/resend', [ForgotPasswordOtpController::class, 'resendOtp'])
+        ->name('password.otp.resend');
+    Route::get('forgot-password/reset', [ForgotPasswordOtpController::class, 'showReset'])
+        ->name('password.otp.reset');
+    Route::post('forgot-password/reset', [ForgotPasswordOtpController::class, 'resetPassword'])
+        ->name('password.otp.update');
+    // ─────────────────────────────────────────────────────────────
 });
 
+// ─── OTP Login Routes ─────────────────────────────────────────────────────────
 Route::get('/otp', [AuthenticatedSessionController::class, 'showOtp'])
     ->name('otp.show');
 Route::post('/otp/verify', [AuthenticatedSessionController::class, 'verifyOtp'])
