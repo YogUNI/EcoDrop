@@ -1,6 +1,6 @@
-# EcoDrop
+# 🌱 EcoDrop
 
-**Platform Manajemen Sampah Berbasis Reward dengan Multi-Role Dashboard dan Real-Time Chat**
+**♻️ Platform Manajemen Sampah Berbasis Reward dengan Multi-Role Dashboard dan Real-Time Chat**
 
 EcoDrop adalah aplikasi web untuk membantu proses pengajuan, verifikasi, dan monitoring setoran sampah secara digital. Aplikasi ini dirancang untuk mendorong kebiasaan ramah lingkungan melalui sistem poin reward, dashboard berbasis role, verifikasi admin, activity log, OTP authentication, upload foto, dan fitur chat real-time antara user dan admin.
 
@@ -14,28 +14,28 @@ EcoDrop adalah aplikasi web untuk membantu proses pengajuan, verifikasi, dan mon
 
 ---
 
-## Daftar Isi
+## 📚 Daftar Isi
 
-- [Tentang Project](#tentang-project)
-- [Fitur Utama](#fitur-utama)
-- [Role dan Hak Akses](#role-dan-hak-akses)
-- [Tech Stack](#tech-stack)
-- [Arsitektur Singkat](#arsitektur-singkat)
-- [Struktur Database Inti](#struktur-database-inti)
-- [Instalasi](#instalasi)
-- [Menjalankan Project](#menjalankan-project)
-- [Akun Demo](#akun-demo)
-- [Alur Penggunaan](#alur-penggunaan)
-- [Struktur Project](#struktur-project)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Tim Pengembang](#tim-pengembang)
-- [Lisensi](#lisensi)
-- [Kontak dan Support](#kontak-dan-support)
+- [📌 Tentang Project](#tentang-project)
+- [✨ Fitur Utama](#fitur-utama)
+- [🧩 Role dan Hak Akses](#role-dan-hak-akses)
+- [🛠️ Tech Stack](#tech-stack)
+- [🏗️ Arsitektur Singkat](#arsitektur-singkat)
+- [🗄️ Struktur Database Inti](#struktur-database-inti)
+- [⚙️ Instalasi](#instalasi)
+- [🚀 Menjalankan Project](#menjalankan-project)
+- [🔐 Akun Demo](#akun-demo)
+- [🔄 Alur Penggunaan](#alur-penggunaan)
+- [📁 Struktur Project](#struktur-project)
+- [🧪 Testing](#testing)
+- [🩺 Troubleshooting](#troubleshooting)
+- [👥 Tim Pengembang](#tim-pengembang)
+- [📄 Lisensi](#lisensi)
+- [📞 Kontak dan Support](#kontak-dan-support)
 
 ---
 
-## Tentang Project
+## 📌 Tentang Project
 
 EcoDrop dibuat sebagai project web development untuk mendigitalisasi alur pengelolaan sampah. Pada sistem manual, proses pencatatan setoran sering tidak rapi, status verifikasi sulit dipantau, komunikasi user dan petugas tercecer di aplikasi lain, serta pemberian poin reward kurang transparan.
 
@@ -51,9 +51,9 @@ Tujuan utama EcoDrop:
 
 ---
 
-## Fitur Utama
+## ✨ Fitur Utama
 
-### User
+### 👤 User
 
 - Register dan login menggunakan OTP email.
 - Dashboard user dengan ringkasan poin dan riwayat setoran.
@@ -66,7 +66,7 @@ Tujuan utama EcoDrop:
 - Crop dan atur posisi foto profil sebelum disimpan.
 - Chat real-time dengan admin.
 
-### Admin
+### 🛡️ Admin
 
 - Login khusus admin dengan OTP email.
 - Hanya admin yang sudah diverifikasi super admin yang dapat masuk dashboard.
@@ -80,7 +80,7 @@ Tujuan utama EcoDrop:
 - Race condition protection agar satu chat tidak diambil dua admin bersamaan.
 - Activity log otomatis ketika melakukan approve, reject, atau delete setoran.
 
-### Super Admin
+### 👑 Super Admin
 
 - Dashboard monitoring sistem secara keseluruhan.
 - Melihat daftar admin pending dan admin verified.
@@ -92,7 +92,7 @@ Tujuan utama EcoDrop:
 - Melihat semua setoran dan activity log admin.
 - Memantau chat dan aktivitas layanan.
 
-### Real-Time Chat
+### 💬 Real-Time Chat
 
 - Conversation antara user dan admin.
 - Pesan real-time menggunakan Laravel Reverb dan Laravel Echo.
@@ -105,7 +105,7 @@ Tujuan utama EcoDrop:
 
 ---
 
-## Role dan Hak Akses
+## 🧩 Role dan Hak Akses
 
 | Role | Akses Utama | Keterangan |
 |---|---|---|
@@ -117,7 +117,7 @@ Proteksi akses dilakukan menggunakan middleware `auth` dan `role`.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Layer | Teknologi |
 |---|---|
@@ -136,7 +136,7 @@ Proteksi akses dilakukan menggunakan middleware `auth` dan `role`.
 
 ---
 
-## Arsitektur Singkat
+## 🏗️ Arsitektur Singkat
 
 EcoDrop menggunakan arsitektur MVC bawaan Laravel.
 
@@ -167,7 +167,7 @@ flowchart LR
 
 ---
 
-## Struktur Database Inti
+## 🗄️ Struktur Database Inti
 
 | Tabel | Fungsi |
 |---|---|
@@ -190,9 +190,9 @@ Relasi penting:
 
 ---
 
-## Instalasi
+## ⚙️ Instalasi
 
-### Prasyarat
+### 📋 Prasyarat
 
 Pastikan sudah terinstall:
 
@@ -330,7 +330,7 @@ npm run build
 
 ---
 
-## Menjalankan Project
+## 🚀 Menjalankan Project
 
 Jalankan beberapa terminal berikut saat development.
 
@@ -376,7 +376,7 @@ composer run dev
 
 ---
 
-## Akun Demo
+## 🔐 Akun Demo
 
 Akun yang dibuat oleh seeder:
 
@@ -397,9 +397,9 @@ Catatan: karena login menggunakan OTP, pastikan konfigurasi mail sudah benar ata
 
 ---
 
-## Alur Penggunaan
+## 🔄 Alur Penggunaan
 
-### User Flow
+### 👤 User Flow
 
 1. User register atau login.
 2. Sistem mengirim OTP ke email.
@@ -410,7 +410,7 @@ Catatan: karena login menggunakan OTP, pastikan konfigurasi mail sudah benar ata
 7. Sistem otomatis mengirim pickup card ke chat.
 8. User menunggu verifikasi admin.
 
-### Admin Flow
+### 🛡️ Admin Flow
 
 1. Admin register melalui halaman admin.
 2. Super admin memverifikasi akun admin.
@@ -421,7 +421,7 @@ Catatan: karena login menggunakan OTP, pastikan konfigurasi mail sudah benar ata
 7. Activity log otomatis tercatat.
 8. System message dikirim ke chat user.
 
-### Super Admin Flow
+### 👑 Super Admin Flow
 
 1. Super admin login.
 2. Super admin melihat dashboard monitoring.
@@ -432,7 +432,7 @@ Catatan: karena login menggunakan OTP, pastikan konfigurasi mail sudah benar ata
 
 ---
 
-## Struktur Project
+## 📁 Struktur Project
 
 ```text
 ecodrop-web/
@@ -470,7 +470,7 @@ ecodrop-web/
 
 ---
 
-## Testing
+## 🧪 Testing
 
 Jalankan test menggunakan:
 
@@ -493,9 +493,9 @@ Rekomendasi test tambahan:
 
 ---
 
-## Troubleshooting
+## 🩺 Troubleshooting
 
-### Foto tidak muncul
+### 📸 Foto tidak muncul
 
 Pastikan sudah menjalankan:
 
@@ -503,7 +503,7 @@ Pastikan sudah menjalankan:
 php artisan storage:link
 ```
 
-### OTP tidak masuk email
+### 📧 OTP tidak masuk email
 
 Gunakan `MAIL_MAILER=log`, lalu cek:
 
@@ -511,7 +511,7 @@ Gunakan `MAIL_MAILER=log`, lalu cek:
 storage/logs/laravel.log
 ```
 
-### Chat real-time tidak berjalan
+### 💬 Chat real-time tidak berjalan
 
 Pastikan:
 
@@ -520,7 +520,7 @@ Pastikan:
 3. `npm run dev` sedang berjalan.
 4. Variable `VITE_REVERB_*` sudah sesuai.
 
-### Perubahan Blade tidak tampil
+### 🧹 Perubahan Blade tidak tampil
 
 Bersihkan cache view:
 
@@ -531,7 +531,7 @@ php artisan cache:clear
 
 ---
 
-## Tim Pengembang
+## 👥 Tim Pengembang
 
 | Nama | Role | GitHub |
 |---|---|---|
@@ -541,14 +541,14 @@ php artisan cache:clear
 
 ---
 
-## Lisensi
+## 📄 Lisensi
 
 Project ini menggunakan lisensi [MIT](LICENSE).
 
 ---
 
-## Kontak dan Support
+## 📞 Kontak dan Support
 
 Jika menemukan bug atau memiliki saran pengembangan, silakan buat issue pada repository GitHub atau hubungi tim pengembang.
 
-EcoDrop - Waste to Worth.
+🌱 **EcoDrop - Waste to Worth.**
