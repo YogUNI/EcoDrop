@@ -43,14 +43,17 @@
         .reveal-delay-3 { transition-delay: 0.3s; }
         .reveal-delay-4 { transition-delay: 0.4s; }
 
-        /* Blob animation */
+        /* Blob animation with GPU acceleration */
         @keyframes blob {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(20px, -30px) scale(1.1); }
-            50% { transform: translate(-15px, 20px) scale(0.9); }
-            75% { transform: translate(30px, 10px) scale(1.05); }
+            0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+            25% { transform: translate3d(20px, -30px, 0) scale(1.1); }
+            50% { transform: translate3d(-15px, 20px, 0) scale(0.9); }
+            75% { transform: translate3d(30px, 10px, 0) scale(1.05); }
         }
-        .animate-blob { animation: blob 8s infinite; }
+        .animate-blob {
+            animation: blob 12s infinite ease-in-out;
+            will-change: transform;
+        }
         .delay-2000 { animation-delay: 2s; }
         .delay-4000 { animation-delay: 4s; }
 
@@ -175,9 +178,9 @@
     <section class="relative min-h-screen flex items-center pt-20 overflow-hidden">
         {{-- Background --}}
         <div class="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50/50 to-white"></div>
-        <div class="absolute top-20 left-10 w-96 h-96 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-        <div class="absolute top-40 right-10 w-96 h-96 bg-emerald-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob delay-2000"></div>
-        <div class="absolute bottom-0 left-1/2 w-96 h-96 bg-teal-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob delay-4000"></div>
+        <div class="absolute top-20 left-10 w-96 h-96 bg-green-200 rounded-full filter blur-2xl opacity-25 animate-blob"></div>
+        <div class="absolute top-40 right-10 w-96 h-96 bg-emerald-200 rounded-full filter blur-2xl opacity-25 animate-blob delay-2000"></div>
+        <div class="absolute bottom-0 left-1/2 w-96 h-96 bg-teal-100 rounded-full filter blur-2xl opacity-25 animate-blob delay-4000"></div>
 
         {{-- Grid pattern --}}
         <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(#10b981 1px, transparent 1px), linear-gradient(90deg, #10b981 1px, transparent 1px); background-size: 40px 40px;"></div>

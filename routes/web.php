@@ -28,19 +28,37 @@ Route::middleware(['auth', 'role:user'])->prefix('user')->group(function () {
     Route::get('/dashboard', [PickupController::class, 'userDashboard'])->name('user.dashboard');
     Route::post('/pickups', [PickupController::class, 'store'])->name('pickups.store');
     Route::delete('/pickups/{id}', [PickupController::class, 'destroy'])->name('pickups.destroy');
+    
+    // Reward System routes
+    Route::get('/rewards', [\App\Http\Controllers\RewardController::class, 'userIndex'])->name('rewards.index');
+    Route::post('/rewards/{id}/redeem', [\App\Http\Controllers\RewardController::class, 'redeem'])->name('rewards.redeem');
 });
 
 // ─── ADMIN ──────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/realtime', [AdminController::class, 'realtimeData'])->name('admin.realtime');
+    Route::get('/redemptions', [\App\Http\Controllers\RewardController::class, 'adminIndex'])->name('admin.redemptions');
+    Route::patch('/redemptions/{id}', [\App\Http\Controllers\RewardController::class, 'updateStatus'])->name('admin.redemptions.update');
 });
 
 // ─── SUPER ADMIN ─────────────────────────────────────────────
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->group(function () {
     Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('superadmin.dashboard');
+    Route::get('/realtime', [SuperAdminController::class, 'realtimeData'])->name('superadmin.realtime');
     Route::patch('/admins/{id}/verify', [SuperAdminController::class, 'verifyAdmin'])->name('superadmin.verify');
     Route::delete('/admins/{id}', [SuperAdminController::class, 'deleteAdmin'])->name('superadmin.delete');
     Route::patch('/users/{id}/ban', [SuperAdminController::class, 'banUser'])->name('superadmin.ban');
+    
+    // Reward management CRUD
+    Route::post('/rewards', [SuperAdminController::class, 'storeReward'])->name('superadmin.rewards.store');
+    Route::post('/rewards/{id}/update', [SuperAdminController::class, 'updateReward'])->name('superadmin.rewards.update');
+    Route::patch('/rewards/{id}/toggle', [SuperAdminController::class, 'toggleReward'])->name('superadmin.rewards.toggle');
+    Route::delete('/rewards/{id}', [SuperAdminController::class, 'deleteReward'])->name('superadmin.rewards.destroy');
+    
+    // SuperAdmin also handles redemption verification
+    Route::get('/redemptions', [\App\Http\Controllers\RewardController::class, 'adminIndex'])->name('superadmin.redemptions');
+    Route::patch('/redemptions/{id}', [\App\Http\Controllers\RewardController::class, 'updateStatus'])->name('superadmin.redemptions.update');
 });
 
 // ─── SHARED: Admin & Super Admin bisa update/delete setoran ──
@@ -89,12 +107,13 @@ Route::middleware('auth')->get('/chat/{pickupId}', function ($pickupId) {
 
 // ─── CHAT LIST (Mobile) ──────────────────────────────────────
 Route::middleware('auth')->get('/chat', function () {
-    $role = Auth::user()->role;
+    $role   = Auth::user()->role;
+    $isUser = $role === 'user';
 
     // Pakai sistem conversation baru
-    if ($role === 'user') {
+    if ($isUser) {
         $conversations = \App\Models\Conversation::where('user_id', Auth::id())
-            ->with(['lastMessage.sender', 'assignedAdmin'])
+            ->with(['user', 'lastMessage', 'assignedAdmin'])
             ->get();
     } else {
         $conversations = \App\Models\Conversation::with(['user', 'lastMessage', 'assignedAdmin'])
@@ -102,7 +121,7 @@ Route::middleware('auth')->get('/chat', function () {
             ->get();
     }
 
-    return view('chat-list-new', compact('conversations'));
+    return view('chat-list-new', compact('conversations', 'isUser'));
 })->name('chat.list');
 
 // ─── HALAMAN CHAT CONVERSATION (Mobile full page) ────────────

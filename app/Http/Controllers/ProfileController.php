@@ -35,26 +35,63 @@ class ProfileController extends Controller
     // ← METHOD BARU: Upload foto profile
     public function updatePhoto(Request $request): RedirectResponse
     {
-        $request->validate([
-            'profile_photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
-        ], [
-            'profile_photo.required' => 'Pilih foto terlebih dahulu',
-            'profile_photo.image'    => 'File harus berupa gambar',
-            'profile_photo.mimes'    => 'Format foto harus jpg, jpeg, png, atau webp',
-            'profile_photo.max'      => 'Ukuran foto maksimal 2MB',
-        ]);
+        if (!$request->filled('cropped_photo') && !$request->hasFile('profile_photo')) {
+            return back()->withErrors(['profile_photo' => 'Pilih foto terlebih dahulu']);
+        }
+
+        if ($request->filled('cropped_photo')) {
+            $request->validate(['cropped_photo' => 'required|string']);
+        } else {
+            $request->validate([
+                'profile_photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:4096',
+            ], [
+                'profile_photo.required' => 'Pilih foto terlebih dahulu',
+                'profile_photo.image'    => 'File harus berupa gambar',
+                'profile_photo.mimes'    => 'Format foto harus jpg, jpeg, png, atau webp',
+                'profile_photo.max'      => 'Ukuran foto maksimal 4MB',
+            ]);
+        }
 
         $user = $request->user();
+        $newPhotoPath = null;
+
+        if ($request->filled('cropped_photo')) {
+            $imageData = $request->input('cropped_photo');
+
+            if (!preg_match('/^data:image\/(jpeg|jpg|png|webp);base64,/', $imageData)) {
+                return back()->withErrors(['profile_photo' => 'Format crop foto tidak valid']);
+            }
+
+            $base64Data = substr($imageData, strpos($imageData, ',') + 1);
+            $binaryData = base64_decode($base64Data, true);
+
+            if ($binaryData === false || strlen($binaryData) > 4 * 1024 * 1024) {
+                return back()->withErrors(['profile_photo' => 'Foto hasil crop tidak valid atau terlalu besar']);
+            }
+
+            $imageInfo = @getimagesizefromstring($binaryData);
+            if ($imageInfo === false || !in_array($imageInfo['mime'], ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                return back()->withErrors(['profile_photo' => 'Foto hasil crop tidak valid']);
+            }
+
+            $extension = match ($imageInfo['mime']) {
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                default => 'jpg',
+            };
+
+            $newPhotoPath = 'profile-photos/profile-' . $user->id . '-' . now()->format('YmdHis') . '.' . $extension;
+            Storage::disk('public')->put($newPhotoPath, $binaryData);
+        } else {
+            $newPhotoPath = $request->file('profile_photo')->store('profile-photos', 'public');
+        }
 
         // Hapus foto lama kalau ada
         if ($user->profile_photo) {
             Storage::disk('public')->delete($user->profile_photo);
         }
 
-        // Simpan foto baru
-        $path = $request->file('profile_photo')->store('profile-photos', 'public');
-
-        $user->update(['profile_photo' => $path]);
+        $user->update(['profile_photo' => $newPhotoPath]);
 
         return Redirect::route('profile.edit')->with('status', 'photo-updated');
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\ConversationMessageSent;
+use App\Events\ConversationListUpdated;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
 use App\Models\Pickup;
@@ -128,6 +129,14 @@ class ConversationController extends Controller
         $conv->update(['last_message_at' => now()]);
         broadcast(new ConversationMessageSent($message->load('sender')));
 
+        // Notify chat-list on all devices instantly
+        broadcast(new ConversationListUpdated(
+            $conv->user_id,
+            $conv->id,
+            'new_message',
+            $conv->assigned_admin_id
+        ));
+
         return response()->json($this->formatMessage($message->fresh(['sender']), $user->id));
     }
 
@@ -173,6 +182,14 @@ class ConversationController extends Controller
         $conv->update(['last_message_at' => now()]);
         broadcast(new ConversationMessageSent($message->load('sender')));
 
+        // Notify all admin chat-lists instantly: this conversation is now handled
+        broadcast(new ConversationListUpdated(
+            $conv->user_id,
+            $conv->id,
+            'handled',
+            $admin->id
+        ));
+
         return response()->json([
             'success'      => true,
             'message'      => $this->formatMessage($message->fresh(['sender']), $admin->id),
@@ -205,6 +222,56 @@ class ConversationController extends Controller
 
         $conv->update(['last_message_at' => now()]);
         broadcast(new ConversationMessageSent($message->load('sender', 'pickup')));
+
+        // Notify chat-list that conversation is now closed
+        broadcast(new ConversationListUpdated(
+            $conv->user_id,
+            $conv->id,
+            'closed',
+            $conv->assigned_admin_id
+        ));
+
+        return response()->json([
+            'success' => true,
+            'message' => $this->formatMessage($message->fresh(['sender']), $admin->id),
+        ]);
+    }
+
+    // Buka ulang conversation yang sudah ditutup (oleh admin/superadmin)
+    public function reopen($conversationId)
+    {
+        $conv  = Conversation::findOrFail($conversationId);
+        $admin = Auth::user();
+
+        if (!in_array($admin->role, ['admin', 'super_admin'])) {
+            abort(403);
+        }
+
+        $conv->update([
+            'is_closed'         => false,
+            'closed_at'         => null,
+            'is_handled'        => false,
+            'assigned_admin_id' => null,
+        ]);
+
+        $message = ConversationMessage::create([
+            'conversation_id' => $conv->id,
+            'sender_id'       => $admin->id,
+            'type'            => 'system',
+            'content'         => "🔄 Sesi layanan dibuka kembali oleh Admin. Silakan kirim pesan jika masih ada yang perlu dibantu.",
+            'is_read'         => false,
+        ]);
+
+        $conv->update(['last_message_at' => now()]);
+        broadcast(new ConversationMessageSent($message->load('sender', 'pickup')));
+
+        // Notify chat-lists: conversation is reopened and unassigned
+        broadcast(new ConversationListUpdated(
+            $conv->user_id,
+            $conv->id,
+            'reopened',
+            null
+        ));
 
         return response()->json([
             'success' => true,

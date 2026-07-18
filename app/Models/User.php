@@ -45,6 +45,12 @@ class User extends Authenticatable
         return $this->hasMany(Pickup::class);
     }
 
+    // Relasi ke penukaran hadiah
+    public function redemptions()
+    {
+        return $this->hasMany(RewardRedemption::class);
+    }
+
     // Online = last_seen_at tidak null DAN dalam 5 menit terakhir
     public function isOnline(): bool
     {
