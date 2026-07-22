@@ -1,221 +1,451 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Masuk | EcoDrop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>* { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+    <style>
+        * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f8fafc 0%, rgba(240,253,244,0.6) 50%, #ecfdf5 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.22;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .blob-1 {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #6ee7b7, #059669);
+            top: -150px; left: -150px;
+        }
+        .blob-2 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, #a7f3d0, #10b981);
+            bottom: -100px; right: -100px;
+        }
+
+        .auth-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 64rem;
+            border-radius: 32px;
+            box-shadow: 0 32px 64px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr;
+            background: #fff;
+        }
+        @media (min-width: 1024px) {
+            .auth-card { grid-template-columns: 1fr 1fr; }
+        }
+
+        .left-panel {
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3rem;
+            background: linear-gradient(145deg, #065f46 0%, #047857 45%, #0f766e 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        @media (min-width: 1024px) {
+            .left-panel { display: flex; }
+        }
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+        }
+        .left-inner { position: relative; z-index: 1; }
+
+        .logo-wrap { display: flex; align-items: center; gap: 0.625rem; margin-bottom: 2.5rem; }
+        .logo-icon {
+            width: 44px; height: 44px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .logo-text { font-size: 1.375rem; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+
+        .stat-pill {
+            display: flex; align-items: center; gap: 0.625rem;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 999px;
+            padding: 0.625rem 1.125rem;
+            margin-bottom: 0.75rem;
+            transition: background 0.2s;
+            cursor: default;
+        }
+        .stat-pill:hover { background: rgba(255,255,255,0.16); }
+        .stat-dot { width: 8px; height: 8px; border-radius: 50%; background: #6ee7b7; flex-shrink: 0; }
+        .stat-pill span { font-size: 0.8125rem; font-weight: 600; color: rgba(255,255,255,0.92); }
+
+        .right-panel {
+            padding: 2.5rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #fff;
+        }
+        @media (min-width: 640px) { .right-panel { padding: 3.5rem; } }
+
+        .input-group { margin-bottom: 1.25rem; }
+        .input-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.01em;
+        }
+        .input-wrap { position: relative; }
+        .input-icon {
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            pointer-events: none;
+            display: flex; align-items: center;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 2.875rem;
+            background: #f9fafb;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 16px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #111827;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .form-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16,185,129,0.12);
+            background: #fff;
+        }
+        .form-input::placeholder { color: #9ca3af; font-weight: 400; }
+        .form-input-pr { padding-right: 3rem; }
+
+        .toggle-btn {
+            position: absolute; right: 14px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            color: #6b7280; padding: 2px;
+            display: flex; align-items: center;
+            transition: color 0.2s;
+        }
+        .toggle-btn:hover { color: #10b981; }
+
+        .checkbox-wrap { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .checkbox-wrap input[type="checkbox"] {
+            width: 18px; height: 18px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px; cursor: pointer;
+            accent-color: #10b981;
+        }
+        .checkbox-label { font-size: 0.875rem; font-weight: 500; color: #6b7280; cursor: pointer; }
+
+        .btn-primary {
+            width: 100%; padding: 1rem;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #fff; font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1rem; font-weight: 900;
+            border: none; border-radius: 16px; cursor: pointer;
+            box-shadow: 0 8px 24px rgba(16,185,129,0.28);
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            letter-spacing: 0.01em;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(16,185,129,0.38);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; }
+        .divider-line { flex: 1; height: 1px; background: #e5e7eb; }
+        .divider-text { font-size: 0.8125rem; font-weight: 600; color: #9ca3af; white-space: nowrap; }
+
+        .btn-secondary {
+            display: block; width: 100%;
+            padding: 0.875rem 1rem;
+            background: transparent;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            text-align: center;
+            font-size: 0.9375rem; font-weight: 700;
+            color: #374151; text-decoration: none;
+            transition: border-color 0.2s, background 0.2s, color 0.2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .btn-secondary:hover { border-color: #10b981; background: #f0fdf4; color: #059669; }
+
+        .alert {
+            padding: 0.875rem 1rem;
+            border-radius: 14px;
+            font-size: 0.875rem; font-weight: 600;
+            display: flex; align-items: flex-start; gap: 0.625rem;
+            margin-bottom: 1.25rem;
+        }
+        .alert-success { background: #f0fdf4; border: 1.5px solid #bbf7d0; color: #166534; }
+        .alert-error { background: #fef2f2; border: 1.5px solid #fecaca; color: #991b1b; }
+        .alert-icon { flex-shrink: 0; margin-top: 1px; }
+
+        .mobile-logo {
+            display: flex; align-items: center; gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .mobile-logo-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .mobile-logo-text { font-size: 1.25rem; font-weight: 900; color: #065f46; letter-spacing: -0.5px; }
+        @media (min-width: 1024px) { .mobile-logo { display: none; } }
+
+        .link-green { color: #059669; font-weight: 700; text-decoration: none; }
+        .link-green:hover { text-decoration: underline; }
+        .link-blue { color: #3b82f6; font-weight: 700; text-decoration: none; }
+        .link-blue:hover { text-decoration: underline; }
+    </style>
 </head>
-<body class="antialiased bg-[#f8fffe]">
-<div class="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden">
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
 
-    {{-- Background blobs --}}
-    <div class="absolute -top-32 -left-32 w-96 h-96 bg-green-100 rounded-full filter blur-3xl opacity-60"></div>
-    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-100 rounded-full filter blur-3xl opacity-60"></div>
-    <div class="absolute inset-0 opacity-[0.02]" style="background-image: linear-gradient(#10b981 1px, transparent 1px), linear-gradient(90deg, #10b981 1px, transparent 1px); background-size: 40px 40px;"></div>
+    <div class="auth-card">
 
-    <div class="max-w-5xl w-full bg-white shadow-2xl rounded-[32px] overflow-hidden lg:grid lg:grid-cols-2 border border-gray-100 relative z-10">
-
-        {{-- Left Panel --}}
-        <div class="hidden lg:flex flex-col justify-between bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 p-12 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 24px 24px;"></div>
-
-            {{-- Logo --}}
-            <a href="/" class="flex items-center gap-3 relative z-10">
-                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
+        {{-- ===== LEFT PANEL ===== --}}
+        <div class="left-panel">
+            <div class="left-inner">
+                <div class="logo-wrap">
+                    <div class="logo-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </div>
+                    <span class="logo-text">EcoDrop</span>
                 </div>
-                <span class="text-xl font-black text-white">EcoDrop</span>
-            </a>
 
-            {{-- Center content --}}
-            <div class="relative z-10 my-8">
-                <div class="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mb-8 shadow-xl">
-                    <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                </div>
-                <h2 class="text-4xl font-black text-white mb-4 leading-tight">
-                    Selamat Datang<br>Kembali!
+                <h2 style="font-size:2.25rem;font-weight:900;color:#fff;line-height:1.15;margin:0 0 0.75rem;letter-spacing:-1px;">
+                    Selamat Datang<br>Kembali! 👋
                 </h2>
-                <p class="text-green-100 text-base font-medium leading-relaxed mb-8">
-                    Masuk dan lanjutkan kontribusimu untuk bumi yang lebih hijau dan bersih.
+                <p style="font-size:0.9375rem;font-weight:500;color:#a7f3d0;margin:0 0 2rem;line-height:1.65;">
+                    Masuk dan lanjutkan perjalananmu dalam mengelola sampah secara cerdas &amp; berkelanjutan.
                 </p>
 
-                {{-- Stats --}}
-                <div class="space-y-3">
-                    @foreach([
-                        ['M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', '1,200+ pengguna aktif'],
-                        ['M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', '1,240 Kg sampah terkumpul'],
-                        ['M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'Reward poin transparan'],
-                    ] as $item)
-                    <div class="flex items-center gap-3 bg-white/10 rounded-2xl px-4 py-3">
-                        <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $item[0] }}"/>
-                            </svg>
-                        </div>
-                        <p class="text-white text-sm font-semibold">{{ $item[1] }}</p>
+                <div>
+                    <div class="stat-pill">
+                        <div class="stat-dot"></div>
+                        <span>1,200+ Pengguna Aktif</span>
                     </div>
-                    @endforeach
+                    <div class="stat-pill">
+                        <div class="stat-dot"></div>
+                        <span>1,240 Kg Sampah Terkumpul</span>
+                    </div>
+                    <div class="stat-pill">
+                        <div class="stat-dot"></div>
+                        <span>Reward Transparan &amp; Terpercaya</span>
+                    </div>
                 </div>
             </div>
 
-            {{-- Bottom --}}
-            <p class="text-green-200 text-xs relative z-10">© 2026 EcoDrop — YoHaTo Labs</p>
+            <p style="position:relative;z-index:1;font-size:0.75rem;font-weight:500;color:#6ee7b7;margin:2rem 0 0;">
+                © 2026 EcoDrop — YoHaTo Labs
+            </p>
         </div>
 
-        {{-- Right Panel --}}
-        <div class="p-8 sm:p-12 lg:p-14 flex flex-col justify-center">
+        {{-- ===== RIGHT PANEL ===== --}}
+        <div class="right-panel">
 
-            {{-- Mobile logo --}}
-            <div class="lg:hidden flex items-center gap-3 mb-8">
-                <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            {{-- Mobile Logo --}}
+            <div class="mobile-logo">
+                <div class="mobile-logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                     </svg>
                 </div>
-                <span class="text-xl font-black text-gray-900">Eco<span class="text-green-600">Drop</span></span>
+                <span class="mobile-logo-text">EcoDrop</span>
             </div>
 
-            <div class="mb-8">
-                <h1 class="text-3xl font-black text-gray-900 mb-2">Masuk ke Akun</h1>
-                <p class="text-gray-500 font-medium">Masukkan email dan password kamu</p>
-            </div>
+            <h1 style="font-size:1.875rem;font-weight:900;color:#111827;margin:0 0 0.375rem;letter-spacing:-0.5px;">
+                Masuk ke Akun
+            </h1>
+            <p style="font-size:0.9375rem;font-weight:500;color:#6b7280;margin:0 0 1.75rem;">
+                Belum punya akun? <a href="{{ route('register') }}" class="link-green">Daftar sekarang</a>
+            </p>
 
+            {{-- Session Status --}}
             @if (session('status'))
-                <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-2xl flex items-center gap-3">
-                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <div class="alert alert-success">
+                    <span class="alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
                         </svg>
-                    </div>
-                    <p class="text-sm font-bold text-green-800">{{ session('status') }}</p>
+                    </span>
+                    <span>{{ session('status') }}</span>
                 </div>
             @endif
 
+            {{-- Error Alert --}}
             @if ($errors->any())
-                <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3">
-                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                <div class="alert alert-error">
+                    <span class="alert-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
                         </svg>
-                    </div>
-                    <p class="text-sm font-bold text-red-700">{{ $errors->first() }}</p>
+                    </span>
+                    <span>{{ $errors->first() }}</span>
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('login') }}" class="space-y-5">
+            {{-- FORM --}}
+            <form method="POST" action="{{ route('login') }}">
                 @csrf
 
                 {{-- Email --}}
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Alamat Email</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                <div class="input-group">
+                    <label class="input-label" for="email">Alamat Email</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
                             </svg>
-                        </div>
-                        <input type="email" name="email" value="{{ old('email') }}" required autofocus
+                        </span>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            required
+                            autofocus
                             placeholder="nama@email.com"
-                            class="block w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 rounded-2xl transition duration-200 font-medium text-gray-900 placeholder-gray-400" />
+                            class="form-input"
+                            autocomplete="email"
+                        >
                     </div>
-                    <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('email')" />
                 </div>
 
                 {{-- Password --}}
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <label class="block text-sm font-bold text-gray-700">Password</label>
+                <div class="input-group">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <label class="input-label" for="password" style="margin-bottom:0;">Kata Sandi</label>
                         @if (Route::has('password.request'))
-                            <a href="{{ route('password.request') }}" class="text-xs font-bold text-green-600 hover:text-green-700 transition">
-                                Lupa Password?
+                            <a href="{{ route('password.request') }}" class="link-green" style="font-size:0.8125rem;">
+                                Lupa kata sandi?
                             </a>
                         @endif
                     </div>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    <div class="input-wrap">
+                        <span class="input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                             </svg>
-                        </div>
-                        <input type="password" name="password" id="password" required
-                            placeholder="••••••••"
-                            class="block w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 rounded-2xl transition duration-200 font-medium text-gray-900 placeholder-gray-400" />
-                        {{-- Toggle password --}}
-                        <button type="button" onclick="togglePassword()"
-                            class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
-                            <svg id="eye-icon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </span>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            placeholder="Masukkan kata sandi"
+                            class="form-input form-input-pr"
+                            autocomplete="current-password"
+                        >
+                        <button type="button" class="toggle-btn" onclick="togglePassword()" id="eye-icon" aria-label="Tampilkan kata sandi">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
                             </svg>
                         </button>
                     </div>
-                    <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('password')" />
                 </div>
 
-                {{-- Remember --}}
-                <div class="flex items-center gap-3">
-                    <input id="remember_me" type="checkbox" name="remember"
-                        class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500">
-                    <label for="remember_me" class="text-sm font-medium text-gray-600">Ingat perangkat ini</label>
+                {{-- Remember Me --}}
+                <div style="margin-bottom:1.5rem;">
+                    <label class="checkbox-wrap" for="remember_me">
+                        <input type="checkbox" id="remember_me" name="remember">
+                        <span class="checkbox-label">Ingat saya di perangkat ini</span>
+                    </label>
                 </div>
 
                 {{-- Submit --}}
-                <button type="submit"
-                    class="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-green-200 transition duration-300 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-base">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
-                    </svg>
+                <button type="submit" class="btn-primary">
                     Masuk Sekarang
                 </button>
             </form>
 
-            {{-- Divider --}}
-            <div class="my-6 flex items-center gap-4">
-                <div class="flex-1 h-px bg-gray-100"></div>
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">atau</p>
-                <div class="flex-1 h-px bg-gray-100"></div>
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span class="divider-text">atau</span>
+                <div class="divider-line"></div>
             </div>
 
-            {{-- Register link --}}
-            <div class="text-center">
-                <p class="text-gray-600 font-medium text-sm mb-3">Belum punya akun?</p>
-                <a href="{{ route('register') }}"
-                   class="w-full inline-flex items-center justify-center gap-2 py-3.5 border-2 border-gray-200 text-gray-700 rounded-2xl font-bold text-sm hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition duration-300">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-                    </svg>
-                    Daftar Akun Gratis
-                </a>
-            </div>
+            <a href="{{ route('register') }}" class="btn-secondary">
+                Belum punya akun? Daftar Gratis
+            </a>
 
-            {{-- Admin login link --}}
-            <p class="text-center text-xs text-gray-400 mt-4">
-                Admin?
-                <a href="{{ route('admin.login') }}" class="text-blue-500 font-bold hover:underline">Login di sini</a>
+            <p style="text-align:center;margin-top:1.25rem;font-size:0.8125rem;font-weight:500;color:#9ca3af;">
+                Login sebagai admin?
+                <a href="{{ route('admin.login') }}" class="link-blue">Portal Admin →</a>
             </p>
         </div>
     </div>
-</div>
 
-<script>
-function togglePassword() {
-    const input = document.getElementById('password');
-    const icon = document.getElementById('eye-icon');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>';
-    } else {
-        input.type = 'password';
-        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
-    }
-}
-</script>
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const btn = document.getElementById('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+            } else {
+                input.type = 'password';
+                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle></svg>`;
+            }
+        }
+    </script>
 </body>
 </html>
